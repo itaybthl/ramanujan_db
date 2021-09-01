@@ -43,3 +43,4 @@ All PCFs and their values will be saved to the database in their Integer PCF for
 ## Optional - Creating the database
 If you want to create the database, configure the connection details in config.py and then, from the root dir, run `python create_db.py`  
 This will create the database and initialize the constant table.
+*Note* this will also require you to have the psql program in your path.
