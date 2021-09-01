@@ -37,5 +37,9 @@ l^3 - 3/2*l^2 + 1991/1200*l - 52511/54000 , (-1/4) * (l - 77/60) * (l - 47/60) *
 l^3 - 3/2*l^2 - 3469/3888*l + 35663/314928 , (-1/4) * (l - 205/108) * (l - 103/108) * (l - 43/108) * (l + 65/108) * (l + 113/108) * (l + 173/108)  
 
 ### Run
-After you have the file, run the command `python3 analyze_cfs.py <name_of_file>`.  
+After you have the file, run the command `python analyze_cfs.py <name_of_file>`.  
 All PCFs and their values will be saved to the database in their Integer PCF form. If the precision of the value will be more than 50 the script will try to compare them to known constants.
+
+## Optional - Creating the database
+If you want to create the database, configure the connection details in config.py and then, from the root dir, run `python create_db.py`  
+This will create the database and initialize the constant table.
