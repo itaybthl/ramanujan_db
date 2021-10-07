@@ -5,7 +5,7 @@ The project mainly focuses on inserting all of the results that the algorithm fi
 ## Steps for running the service
 
 ### Minimum prerequisites
-Make sure that your host has python3.8.10 or above and pip.
+Make sure that your host has python-3.8.10 or above and pip.
 
 ### Step 1 - installing required packages
 To install the required packages run pip install -r requirements.txt from the root dir of the project.
@@ -24,8 +24,9 @@ if you want to stop the process (currently only on linux), run:
 `python ramanujan.py stop`  
 Note that you can also close the process by just closing the main window.
 
-## Running localy
-After configuring the database connection in config.py (step 2), you can also run the code localy if you have a list of PCFs.  
+## Running locally
+After configuring the database connection in config.py (step 2), you can also run the code locally if you have a list of PCFs.
+
 ### Save to file
 Save all of the PCFs in a file, with the following formatting:  
 a_n polynomial, b_n polyinomial and a new line between each PCF.  
