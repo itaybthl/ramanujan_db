@@ -13,7 +13,7 @@ from sqlalchemy import exc
 
 from db import ramanujan_db
 from db import models
-from jobs.cf_calc import CfCalc, get_poly_deg, check_rational, check_fr
+from utils.cf_calc import CfCalc, get_poly_deg, check_rational, check_fr
 
 
 getcontext().prec = 2000

@@ -18,7 +18,7 @@ def test_run_one():
     pass
 
 def test_sanity():
-
+    pass
 
 if __name__ == '__main__':
     unittest.main()

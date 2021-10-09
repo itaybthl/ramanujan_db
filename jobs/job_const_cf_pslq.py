@@ -5,7 +5,7 @@ import time
 from sqlalchemy import Integer, or_, Float
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.sql.expression import func
-from jobs import pslq_utils
+from utils import pslq_utils
 import logging
 import logging.config
 import sys

@@ -1,5 +1,5 @@
 import pytest
-import jobs.cf_calc as utils
+import utils.cf_calc as utils
 import math
 import mpmath
 from decimal import getcontext
