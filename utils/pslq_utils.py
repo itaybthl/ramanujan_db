@@ -8,7 +8,7 @@ def verify_result(first_value, second_value, result):
     if mp.almosteq(right_side, left_side):
         return True
 
-    return None
+    return False
 
 def check_int_null_vector(first_value, second_value):
     """
