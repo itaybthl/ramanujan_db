@@ -21,6 +21,5 @@ session = UnifiedAlchemyMagicMock(data=[
             [mock.call.query(models.Cf),
              mock.call.filter(models.Cf.precision_data == None)],
             [models.Cf(cf_id = 2,partial_numerator=[1], partial_denominator=[1],precision_data =None)]
-        )
-        
+        ) 
     ])
