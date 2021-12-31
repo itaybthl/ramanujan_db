@@ -18,7 +18,10 @@ def test_run_one():
     pass
 
 def test_sanity():
-    pass
+   queried_data = precision.run_query(5)
+   results, prec = precision.execute_job(queried_data)
+   precision.summarize_results((results, prec))
+
 
 if __name__ == '__main__':
     unittest.main()

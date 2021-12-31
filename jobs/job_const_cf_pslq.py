@@ -1,15 +1,16 @@
-from db import models
-from db import ramanujan_db
-import mpmath as mp
+import os
 import time
-from sqlalchemy import Integer, or_, Float
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.sql.expression import func
-from utils import pslq_utils
 import logging
 import logging.config
-import sys
-import os
+
+import mpmath as mp
+from sqlalchemy import or_, Float
+from sqlalchemy.orm.attributes import flag_modified
+
+from db import models
+from db import ramanujan_db
+from utils import pslq_utils
+from utils.db_utils import get_filters
 
 mp.mp.dps = 2000
 
@@ -18,97 +19,94 @@ LOGGER_NAME = 'job_logger'
 BULK_SIZE = 500
 
 FILTERS = [
-        models.Cf.precision_data != None,
-        models.Cf.precision_data.has(models.CfPrecision.precision > 100),
-        models.Cf.precision_data.has(models.CfPrecision.general_data != None),
-        models.Cf.precision_data.has(models.CfPrecision.general_data['rational'].cast(Float) == 0.0),
-        or_(models.Cf.scanned_algo == None, ~models.Cf.scanned_algo.has_key(ALGORITHM_NAME))
-        ]
+    models.Cf.precision_data is not None,
+    models.Cf.precision_data.has(models.CfPrecision.precision > 100),
+    models.Cf.precision_data.has(models.CfPrecision.general_data is not None),
+    models.Cf.precision_data.has(
+        models.CfPrecision.general_data['rational'].cast(Float) == 0.0),
+    or_(models.Cf.scanned_algo is None, ~
+        models.Cf.scanned_algo.has_key(ALGORITHM_NAME))
+]
 
-def get_filters(num_denom_factor):
-    filters = FILTERS
-    if num_denom_factor is not None:
-        factor, strict = num_denom_factor
-        num_deg = func.cardinality(models.Cf.partial_numerator) - 1
-        denom_deg = func.cardinality(models.Cf.partial_denominator) - 1
-        if factor > 0:
-            low_deg = denom_deg * factor
-            high_deg = num_deg
-        else:
-            low_deg = num_deg * abs(factor)
-            high_deg = denom_deg
-
-        if strict:
-            new_filter = low_deg == high_deg
-        else:
-            new_filter = low_deg <= high_deg
-
-        filters = [new_filter] + filters
-
-    return filters 
 
 def check_cf_to_const(cf_value, const_value):
     if const_value == 1:
         return None
 
-    result = pslq_utils.check_int_null_vector(mp.mpf(str(const_value)), cf_value)
+    result = pslq_utils.check_int_null_vector(
+        mp.mpf(str(const_value)), cf_value)
     if result:
         logging.getLogger(LOGGER_NAME).info('Found connection')
 
     return result
 
-def check_cf(cf, constants):
-    logging.getLogger(LOGGER_NAME).info(f'checking cf: {cf.cf_id}: {cf.partial_numerator}, {cf.partial_denominator}')
+
+def check_cf(pcf, constants):
+    logging.getLogger(LOGGER_NAME).info(
+        'checking cf: %s: %s, %s', pcf.cf_id, pcf.partial_numerator, pcf.partial_denominator)
     connection_data = None
-    cf_precision = cf.precision_data.precision
+    cf_precision = pcf.precision_data.precision
     for const in constants:
-        logging.getLogger(LOGGER_NAME).debug(f'checking const {const.name} with cf {cf.cf_id}')
+        logging.getLogger(LOGGER_NAME).debug(
+            'checking const %s with cf %s', const.name, pcf.cf_id)
         mp.mp.dps = min(const.precision, cf_precision) * 9 // 10
-        cf_value = mp.mpf(str(cf.precision_data.previous_calc[2])) / mp.mpf(str(cf.precision_data.previous_calc[3]))
+        cf_value = mp.mpf(str(
+            pcf.precision_data.previous_calc[2])) / mp.mpf(str(pcf.precision_data.previous_calc[3]))
         result = check_cf_to_const(cf_value, const.value)
         if result:
             if connection_data:
                 # TODO: Report because we found 2 different constants
-                logging.getLogger(LOGGER_NAME).critical(f'found connection to multiple constants. cf_id: {cf.cf_id}')
-            connection_data = models.CfConstantConnection(cf_id=cf.cf_id, constant_id=const.constant_id, connection_type="PSLQ", connection_details=result)
-    
+                logging.getLogger(LOGGER_NAME).critical(
+                    'found connection to multiple constants. cf_id: %s', pcf.cf_id)
+            connection_data = models.CfConstantConnection(
+                cf_id=pcf.cf_id, constant_id=const.constant_id,
+                connection_type="PSLQ", connection_details=result)
+
     return connection_data
 
+
 def execute_job(query_data):
-    logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_worker_{os.getpid()}'})
+    logging.config.fileConfig('logging.config', defaults={
+                              'log_filename': f'pslq_const_worker_{os.getpid()}'})
     db_handle = ramanujan_db.RamanujanDB()
     connections = []
     cfs = []
-    for cf in query_data:
-        connection_data = check_cf(cf, db_handle.constants)
+    for pcf in query_data:
+        connection_data = check_cf(pcf, db_handle.constants)
         if connection_data:
             connections.append(connection_data)
-        if not cf.scanned_algo:
-            cf.scanned_algo = dict()
-        cf.scanned_algo[ALGORITHM_NAME] = int(time.time())
+        if not pcf.scanned_algo:
+            pcf.scanned_algo = {}
+        pcf.scanned_algo[ALGORITHM_NAME] = int(time.time())
         # for postgres < 9.4
-        flag_modified(cf, 'scanned_algo')
-        cfs.append(cf)
-    logging.getLogger(LOGGER_NAME).info(f'finished - worked on {len(cfs)} cfs - found {len(connections)} results')
+        flag_modified(pcf, 'scanned_algo')
+        cfs.append(pcf)
+    logging.getLogger(LOGGER_NAME).info(
+        'finished - worked on %s cfs - found %s results', len(cfs), len(connections))
     db_handle.session.add_all(cfs)
     db_handle.session.add_all(connections)
     db_handle.session.commit()
     db_handle.session.close()
-    
-    logging.getLogger(LOGGER_NAME).info(f'Commit done')
+
+    logging.getLogger(LOGGER_NAME).info('Commit done')
 
     return len(cfs), len(connections)
 
+
 def run_query(bulk=0, num_denom_factor=None):
-    logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_manager'})
+    logging.config.fileConfig('logging.config', defaults={
+                              'log_filename': 'pslq_const_manager'})
     if not bulk:
         bulk = BULK_SIZE
-    logging.getLogger(LOGGER_NAME).debug(f'Starting to check connections, bulk size: {bulk}')
+    logging.getLogger(LOGGER_NAME).debug(
+        'Starting to check connections, bulk size: %s', bulk)
     db_handle = ramanujan_db.RamanujanDB()
-    results = db_handle.session.query(models.Cf).filter(*get_filters(num_denom_factor)).limit(bulk).all()
+    results = db_handle.session.query(models.Cf).filter(
+        *(FILTERS + get_filters(num_denom_factor))).limit(bulk).all()
     db_handle.session.close()
-    logging.getLogger(LOGGER_NAME).info(f'size of batch is {len(results)}')
+    logging.getLogger(LOGGER_NAME).info('size of batch is %s', len(results))
     return results
+
 
 def summarize_results(results):
     total_cfs = 0
@@ -116,20 +114,23 @@ def summarize_results(results):
     for cfs, connections in results:
         total_cfs += cfs
         total_connections += connections
-    logging.getLogger(LOGGER_NAME).info(f'Total iteration over: {total_cfs} cfs, found {total_connections} connections')
+    logging.getLogger(LOGGER_NAME).info(
+        'Total iteration over: %s cfs, found %s connections', total_cfs, total_connections)
 
-def run_one(cf_id, db_handle,write_to_db=False):
+
+def run_one(cf_id, db_handle, write_to_db=False):
     #db_handle = ramanujan_db.RamanujanDB()
-    cf = db_handle.session.query(models.Cf).filter(models.Cf.cf_id == cf_id).first()
-    connection_data = check_cf(cf, db_handle.constants)
+    pcf = db_handle.session.query(models.Cf).filter(
+        models.Cf.cf_id == cf_id).first()
+    connection_data = check_cf(pcf, db_handle.constants)
     if write_to_db:
-        if not cf.scanned_algo:
-            cf.scanned_algo = dict()
-        cf.scanned_algo[ALGORITHM_NAME] = int(time.time())
+        if not pcf.scanned_algo:
+            pcf.scanned_algo = {}
+        pcf.scanned_algo[ALGORITHM_NAME] = int(time.time())
         # for postgres < 9.4
-        flag_modified(cf, 'scanned_algo')
+        flag_modified(pcf, 'scanned_algo')
 
-        db_handle.session.add_all([cf])
+        db_handle.session.add_all([pcf])
         if connection_data:
             db_handle.session.add_all([connection_data])
         db_handle.session.commit()

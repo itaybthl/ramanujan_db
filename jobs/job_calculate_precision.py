@@ -8,12 +8,12 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 import mpmath
 
-from sqlalchemy.sql.expression import func
 from sqlalchemy import exc
 
 from db import ramanujan_db
 from db import models
 from utils.cf_calc import CfCalc, get_poly_deg, check_rational, check_fr
+from utils.db_utils import get_filters
 
 
 getcontext().prec = 2000
@@ -39,30 +39,6 @@ class CfData:
     original_value: str = ''
     converges: bool = True
     reduction: int = 0
-
-
-def get_filters(num_denom_factor):
-    filters = FILTERS
-    if num_denom_factor is not None:
-        factor, strict = num_denom_factor
-        num_deg = func.cardinality(models.Cf.partial_numerator) - 1
-        denom_deg = func.cardinality(models.Cf.partial_denominator) - 1
-        if factor > 0:
-            low_deg = denom_deg * factor
-            high_deg = num_deg
-        else:
-            low_deg = num_deg * abs(factor)
-            high_deg = denom_deg
-
-        if strict:
-            new_filter = low_deg == high_deg
-        else:
-            new_filter = low_deg <= high_deg
-
-        filters = filters + [new_filter]
-
-    return filters
-
 
 class PrecisionType(Enum):
     HIGH_PREC = 1
@@ -184,7 +160,7 @@ def run_query(bulk=0, num_denom_factor=None):
         'starting to calculate precision for %s cfs', bulk)
 
     queried_data = db_handle.session.query(models.Cf).filter(
-        *get_filters(num_denom_factor)).limit(bulk).all()
+        *(FILTERS + get_filters(num_denom_factor))).limit(bulk).all()
     db_handle.session.close()
     logging.getLogger(LOGGER_NAME).info(
         'size of batch is %s', len(queried_data))
