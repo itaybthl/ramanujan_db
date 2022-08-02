@@ -58,6 +58,15 @@ CREATE TABLE cf_constant_connection (
 	PRIMARY KEY (constant_id, cf_id)
 );
 
+CREATE TABLE cf_multi_constant_connection (
+	constant_ids INT[] NOT NULL,
+	cf_id UUID NOT NULL REFERENCES cf (cf_id),
+	connection_type VARCHAR NOT NULL,
+	connection_details INT[] NOT NULL,
+	insertion_date timestamp DEFAULT current_timestamp,
+	PRIMARY KEY (constant_id, cf_id)
+);
+
 CREATE TABLE cf_precision (
 	cf_id UUID NOT NULL PRIMARY KEY REFERENCES cf (cf_id),
 	insertion_date timestamp DEFAULT current_timestamp,

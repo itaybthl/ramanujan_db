@@ -77,6 +77,26 @@ class CfConstantConnection(Base):
     constant = relationship('Constant')
 
 
+class CfMultiConstantConnection(Base):
+    __tablename__ = 'cf_multi_constant_connection'
+
+    # TODO array of foreign keys is fundamentally impossible in SQL?
+    # emphasis on array, not some unordered collection, which is why
+    # i'm guessing junction tables are out of the question, but i'm no DBA so...
+    # https://stackoverflow.com/a/41054753
+    # actually maybe technically a junction table can work, with an extra column
+    # indicating the position the constant would otherwise have in the array here,
+    # but that kinda solution feels wrong...
+    constant_ids = Column(ARRAY(Integer()), primary_key=True, nullable=False) # ForeignKey('constant.constant_id')
+    cf_id = Column(ForeignKey('cf.cf_id'), primary_key=True, nullable=False)
+    connection_type = Column(String, nullable=False)
+    connection_details = Column(ARRAY(Integer()), nullable=False)
+    insertion_date = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
+
+    cf = relationship('Cf')
+    constant = relationship('Constant')
+
+
 class ContinuedFractionRelation(Base):
     __tablename__ = 'continued_fraction_relation'
 
