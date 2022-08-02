@@ -1,4 +1,4 @@
-# Ramanuajn Database
+# Ramanujan Database
 This project is an extension of the [ramanujan project](https://github.com/ShaharGottlieb/MasseyRamanujan).
 The project mainly focuses on inserting all of the results that the algorithm find into a database for easier analysis and a centralized source of data.
 
