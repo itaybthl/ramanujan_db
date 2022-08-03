@@ -10,12 +10,14 @@ import logging
 import logging.config
 import sys
 import os
+from itertools import combinations
 
 mp.mp.dps = 2000
 
 ALGORITHM_NAME = 'PSLQ_CF_CONST'
 LOGGER_NAME = 'job_logger'
 BULK_SIZE = 500
+num_of_constants = 1
 
 FILTERS = [
         models.Cf.precision_data != None,
@@ -74,13 +76,40 @@ def check_cf(cf, constants):
     
     return connection_data
 
+def check_cf_to_const2(cf_value, const_values):
+    if len(const_values) == 1 and const_values[0] == 1:
+        return None
+
+    result = pslq_utils.check_int_null_vector2([mp.mpf(str(val)) for val in const_values], cf_value)
+    if result:
+        logging.getLogger(LOGGER_NAME).info('Found connection')
+
+    return result
+
+def check_cf2(cf, constants):
+    logging.getLogger(LOGGER_NAME).info(f'checking cf: {cf.cf_id}: {cf.partial_numerator}, {cf.partial_denominator}')
+    connection_data = None
+    cf_precision = cf.precision_data.precision
+    for consts in combinations(constants, num_of_constants):
+        logging.getLogger(LOGGER_NAME).debug(f'checking consts {[const.name for const in consts]} with cf {cf.cf_id}')
+        mp.mp.dps = min(min([const.precision for const in consts]), cf_precision) * 9 // 10
+        cf_value = mp.mpf(str(cf.precision_data.previous_calc[2])) / mp.mpf(str(cf.precision_data.previous_calc[3]))
+        result = check_cf_to_const2(cf_value, [const.value for const in consts])
+        if result:
+            if connection_data:
+                # TODO: Report because we found 2 different constants
+                logging.getLogger(LOGGER_NAME).critical(f'found connection to multiple constants. cf_id: {cf.cf_id}')
+            connection_data = models.CfMultiConstantConnection(cf_id=cf.cf_id, constant_ids=[const.constant_id for const in consts], connection_type="PSLQ", connection_details=result)
+    
+    return connection_data
+
 def execute_job(query_data):
     logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_worker_{os.getpid()}'})
     db_handle = ramanujan_db.RamanujanDB()
     connections = []
     cfs = []
     for cf in query_data:
-        connection_data = check_cf(cf, db_handle.constants)
+        connection_data = check_cf2(cf, db_handle.constants)
         if connection_data:
             connections.append(connection_data)
         if not cf.scanned_algo:
@@ -99,7 +128,7 @@ def execute_job(query_data):
 
     return len(cfs), len(connections)
 
-def run_query(bulk=0, num_denom_factor=None):
+def run_query(bulk=0, num_denom_factor=None, num_of_consts=None):
     logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_manager'})
     if not bulk:
         bulk = BULK_SIZE
@@ -108,6 +137,9 @@ def run_query(bulk=0, num_denom_factor=None):
     results = db_handle.session.query(models.Cf).filter(*get_filters(num_denom_factor)).limit(bulk).all()
     db_handle.session.close()
     logging.getLogger(LOGGER_NAME).info(f'size of batch is {len(results)}')
+    if num_of_consts:
+        num_of_constants = num_of_consts
+    logging.getLogger(LOGGER_NAME).info(f'checking against {num_of_consts} constants at a time')
     return results
 
 def summarize_results(results):
@@ -121,7 +153,7 @@ def summarize_results(results):
 def run_one(cf_id, db_handle,write_to_db=False):
     #db_handle = ramanujan_db.RamanujanDB()
     cf = db_handle.session.query(models.Cf).filter(models.Cf.cf_id == cf_id).first()
-    connection_data = check_cf(cf, db_handle.constants)
+    connection_data = check_cf2(cf, db_handle.constants)
     if write_to_db:
         if not cf.scanned_algo:
             cf.scanned_algo = dict()

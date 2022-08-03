@@ -30,11 +30,11 @@ configuration = {
 
 # If you make your own database, 'name' must match the name in 'create_db.sql' in the line 'CREATE DATABASE <name>'
 db_configuration = {
-        'host': '',
+        'host': 'localhost',
         'port': 5432,
-        'user': '',
-        'passwd': '',
-        'name': ''
+        'user': 'postgres',
+        'passwd': 'apery',
+        'name': 'ramanujan'
 }
 
 def get_connection_string(db_name=None):
