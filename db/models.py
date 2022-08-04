@@ -87,7 +87,7 @@ class CfMultiConstantConnection(Base):
     # actually maybe technically a junction table can work, with an extra column
     # indicating the position the constant would otherwise have in the array here,
     # but that kinda solution feels wrong...
-    constant_ids = Column(ARRAY(Integer()), primary_key=True, nullable=False) # ForeignKey('constant.constant_id')
+    constant_ids = Column(ARRAY(Integer()), nullable=False) # primary_key=True, ForeignKey('constant.constant_id')
     cf_id = Column(ForeignKey('cf.cf_id'), primary_key=True, nullable=False)
     connection_type = Column(String, nullable=False)
     connection_details = Column(ARRAY(Integer()), nullable=False)
