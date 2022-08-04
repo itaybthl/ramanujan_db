@@ -93,14 +93,15 @@ class WorkerPool:
             queried_data = module.run_query(**args)
             if not any(queried_data):
                 return False
+            extra_args = getattr(module, 'EXECUTE_NEEDS_ARGS', False)
             if not run_async:
-                results = [module.execute_job(queried_data)]
+                results = [module.execute_job(queried_data, **args) if extra_args else module.execute_job(queried_data)]
             else:
                 async_cores = async_cores if async_cores != 0 else os.cpu_count()
                 if split_async:
                     queried_data = WorkerPool.split_parameters(queried_data, async_cores)
                 for queried_chunk in queried_data:
-                    message = Message.get_execution_message(module_path, queried_chunk)
+                    message = Message.get_execution_message(module_path, (queried_chunk, args) if extra_args else queried_chunk)
                     job_queue.put(message)
                 results = []
                 while len(results) != len(queried_data):
@@ -145,7 +146,8 @@ class WorkerPool:
     def run_sub_job(module_path, parameters):
         module = import_module(module_path)
         if parameters:
-            result = module.execute_job(parameters)
+            extra_args = getattr(module, 'EXECUTE_NEEDS_ARGS', False)
+            result = module.execute_job(parameters[0], **parameters[1]) if extra_args else module.execute_job(parameters)
         else:
             result = module.execute_job()
         return result

@@ -94,7 +94,7 @@ class CfMultiConstantConnection(Base):
     insertion_date = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     cf = relationship('Cf')
-    constant = relationship('Constant')
+    #constant = relationship('Constant')
 
 
 class ContinuedFractionRelation(Base):

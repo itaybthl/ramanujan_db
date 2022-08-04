@@ -64,7 +64,7 @@ CREATE TABLE cf_multi_constant_connection (
 	connection_type VARCHAR NOT NULL,
 	connection_details INT[] NOT NULL,
 	insertion_date timestamp DEFAULT current_timestamp,
-	PRIMARY KEY (constant_id, cf_id)
+	PRIMARY KEY (constant_ids, cf_id)
 );
 
 CREATE TABLE cf_precision (
