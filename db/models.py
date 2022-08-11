@@ -1,5 +1,5 @@
 # coding: utf-8
-from sqlalchemy import ARRAY,Column, DateTime, Float, ForeignKey, Integer, Numeric, String, UniqueConstraint, text
+from sqlalchemy import ARRAY,Column, DateTime, Float, ForeignKey, Integer, Numeric, String, UniqueConstraint, text, Table, Boolean
 from sqlalchemy.sql.sqltypes import BigInteger
 from sqlalchemy.types import Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -19,6 +19,7 @@ class Constant(Base):
     value = Column(Numeric, nullable=False)
     precision = Column(Integer, nullable=False)
     trust = Column(Float, nullable=False, server_default=text("1"))
+    artificial = Column(Boolean, nullable=False, server_default=text("False"))
     _lambda = Column('lambda', Float, server_default=text("0"))
     delta = Column(Float, server_default=text("0"))
     insertion_date = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
@@ -32,7 +33,6 @@ class CfFamily(Base):
     constant = Column(ForeignKey('constant.constant_id'))
 
     constant1 = relationship('Constant')
-
 
 class Cf(Base):
     __tablename__ = 'cf'
@@ -76,25 +76,37 @@ class CfConstantConnection(Base):
     cf = relationship('Cf')
     constant = relationship('Constant')
 
+constant_in_relation_table = Table(
+    "constant_in_relation",
+    Base.metadata,
+    Column('constant_id', ForeignKey('constant.constant_id'), primary_key=True),
+    Column('relation_id', ForeignKey('relation.relation_id'), primary_key=True),
+)
 
-class CfMultiConstantConnection(Base):
-    __tablename__ = 'cf_multi_constant_connection'
+cf_in_relation_table = Table(
+    "cf_in_relation",
+    Base.metadata,
+    Column('cf_id', ForeignKey('cf.cf_id'), primary_key=True),
+    Column('relation_id', ForeignKey('relation.relation_id'), primary_key=True),
+)
 
-    # TODO array of foreign keys is fundamentally impossible in SQL?
-    # emphasis on array, not some unordered collection, which is why
-    # i'm guessing junction tables are out of the question, but i'm no DBA so...
-    # https://stackoverflow.com/a/41054753
-    # actually maybe technically a junction table can work, with an extra column
-    # indicating the position the constant would otherwise have in the array here,
-    # but that kinda solution feels wrong...
-    constant_ids = Column(ARRAY(Integer()), nullable=False) # primary_key=True, ForeignKey('constant.constant_id')
-    cf_id = Column(ForeignKey('cf.cf_id'), primary_key=True, nullable=False)
-    connection_type = Column(String, nullable=False)
-    connection_details = Column(ARRAY(Integer()), nullable=False)
+# TODO what if we just ditch the Constant table, decide everything is a PCF, and add a
+# nullable "name" column to the CF table that allows us to give names to special CFs?
+# This does make it somewhat inconvenient to add new named constants though, as it
+# requires us to find a PCF expansion of them first
+class Relation(Base):
+    __tablename__ = 'relation'
+
+    relation_id = Column(UUID, primary_key=True, server_default=text("uuid_generate_v1()"))
+    relation_type = Column(String, nullable=False)
+    # if this needs an order on the constants and cfs (and it probably will), it is
+    # determined by ascending order on the constant_ids, and then ascending order on the cf_ids
+    # generally going to be of the form: (polydegree, innerdegree, argcount, (nullvector))
+    details = Column(ARRAY(Integer()), nullable=False)
     insertion_date = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
-    cf = relationship('Cf')
-    #constant = relationship('Constant')
+    cfs = relationship('Cf', secondary=cf_in_relation_table)
+    constants = relationship('Constant', secondary=constant_in_relation_table)
 
 
 class ContinuedFractionRelation(Base):

@@ -36,3 +36,10 @@ def check_int_null_vector2(constants, cf):
     constants = np.concatenate((constants, [1]))
     res = mp.pslq(np.concatenate((constants, -cf * constants)).tolist())
     return verify_result2(constants, cf, res) if res else None
+
+def find_null_polynomial(poly):
+    res = mp.pslq(poly)
+    if mp.almosteq(np.dot(poly, res), 0):
+        return res
+    print("False positive")
+    return None
