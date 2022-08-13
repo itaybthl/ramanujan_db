@@ -1,5 +1,5 @@
 '''
-Finds relations between constants and/or continued fractions in the DB. Configured as such:
+Finds polynomial relations between constants and/or continued fractions in the DB, using PSLQ. Configured as such:
 'bulk': How many CFs to scan. (since there can be many in the DB)
 'num_denom_factor': Tuple of the form (factor: int, strict: bool). Every PCF in the DB can be characterized
                     by the ratio between the degrees of its polynomials, so factor is either the exact ratio
@@ -40,6 +40,7 @@ import logging.config
 import sys
 import os
 from itertools import chain, combinations, combinations_with_replacement
+from collections import Counter
 from functools import reduce
 from operator import mul
 import numpy as np
@@ -95,87 +96,95 @@ def poly_check(values, exponents):
     if result:
         indices_per_var = ((i[0] for i in enumerate(exponents) if i[1][j]) for j in range(num_of_consts[0] + num_of_cfs[0]))
         if any(i for i in indices_per_var if not any(result[j] for j in i)):
-            logging.getLogger(LOGGER_NAME).info('Redundancy detected')
+            logging.getLogger(LOGGER_NAME).info(f'Redundancy detected: relation is {result}')
             return None # TODO maybe return the "reduced" relation anyway? With details on how to reduce it
+        # TODO check redundant degree too?
         logging.getLogger(LOGGER_NAME).info('Found relation')
 
     return result
 
-def check_cfs(cfs, num_of_constants, exponents, existing):
-    logging.getLogger(LOGGER_NAME).info(f'checking cfs: {[(cf.partial_numerator, cf.partial_denominator) for cf in cfs]}')
-    relation = None
-    constants = db_handle.constants
-    if not use_artificial:
-        constants = constants.filter(not models.Constant.artificial)
-    num, strict = num_of_constants # if strict then only check subsets of exactly num size, else check subsets of size 1..num
-    subsets = combinations(constants, num) if strict else chain.from_iterable(combinations(constants, n) for n in range(1,num+1))
-    subsets = (consts for consts in subsets if not any(r for r in existing if set(c.constant_id for c in r.constants) <= set(c.constant_id for c in consts)))
-    for consts in subsets:
-        logging.getLogger(LOGGER_NAME).debug(f'checking consts {[const.name for const in consts]}')
-        mp.mp.dps = min([const.precision for const in consts] + [cf.precision_data.precision for cf in cfs]) * 9 // 10
-        result = poly_check([const.value for const in consts]
-                            + [mp.mpf(str(cf.precision_data.previous_calc[2])) / mp.mpf(str(cf.precision_data.previous_calc[3])) for cf in cfs],
-                            exponents)
-        if result:
-            if relation:
-                # TODO: Report because we found 2 different constants
-                logging.getLogger(LOGGER_NAME).critical(f'found connection to multiple constants. cf_id: {cf.cf_id}')
-            relation = models.Relation(connection_type=ALGORITHM_NAME, details=result, cfs=cfs, constants=consts)
-    
-    return relation
+def check_cfs(cfs, constants, num_of_consts, exponents, degree, use_artificial, existing):
+    try:
+        logging.getLogger(LOGGER_NAME).info(f'checking cfs: {[(cf.partial_numerator, cf.partial_denominator) for cf in cfs]}')
+        relation = None
+        if not use_artificial: # just this line caused me so much trouble... doesn't seem like SQL handles booleans too well
+            constants = constants.filter(models.Constant.artificial == 0)
+        num, strict = num_of_consts # if strict then only check subsets of exactly num size, else check subsets of size 1..num
+        subsets = combinations(constants, num) if strict else chain.from_iterable(combinations(constants, n) for n in range(1,num+1))
+        subsets = list(subsets) # weird python idiosyncrasies mean this must be evaluated before being iterated on again
+        subsets = (consts for consts in subsets if not any(r for r in existing if set(c.constant_id for c in r.constants) <= set(c.constant_id for c in consts)))
+        for consts in subsets:
+            logging.getLogger(LOGGER_NAME).debug(f'checking consts {[const.name for const in consts]}')
+            mp.mp.dps = min([const.precision for const in consts] + [cf.precision_data.precision for cf in cfs]) * 9 // 10
+            result = poly_check([const.value for const in consts]
+                                + [mp.mpf(str(cf.precision_data.previous_calc[2])) / mp.mpf(str(cf.precision_data.previous_calc[3])) for cf in cfs],
+                                exponents)
+            if result:
+                if relation:
+                    # TODO: Report because we found 2 different constants
+                    logging.getLogger(LOGGER_NAME).critical(f'found connection to multiple constants. cf_id: {cf.cf_id}')
+                relation = models.Relation(connection_type=ALGORITHM_NAME, details=list(degree)+result, cfs=cfs, constants=consts)
+        
+        return relation
+    except Exception as e:
+        logging.getLogger(LOGGER_NAME).error(f'tf happened {e}')
 
 def run_query(bulk=0, num_denom_factor=None, num_of_consts=None, num_of_cfs=None, degree=None, use_artificial=False):
     logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_manager'})
     bulk = bulk if bulk else BULK_SIZE
     logging.getLogger(LOGGER_NAME).debug(f'Starting to check relations, using PCF bulk size {bulk}')
     db_handle = ramanujan_db.RamanujanDB()
-    results = db_handle.session.query(models.Cf).filter(*get_filters(num_denom_factor)).limit(bulk).all()
-    # TODO add .order_by(func.random())? apparently postgresql is really slow with this, oughta test this later
-    # see also https://www.depesz.com/2007/09/16/my-thoughts-on-getting-random-row/
-    # Testing on 5000 total CFs and 10000 total CFs shows that for a bulk of 1000 on a local DB,
-    # order_by(func.random()) seems to take approx 1 second independently of total CF count
-    # and without that it takes negligible time. worth it? probably
+    results = db_handle.session.query(models.Cf).filter(*get_filters(num_denom_factor)).order_by(func.random()).limit(bulk).all()
+    # apparently postgresql is really slow with the order_by(random) part,
+    # but on 1000 CFs it only takes 1 second, which imo is worth it since
+    # that allows us more variety in testing the CFs
     db_handle.session.close()
     logging.getLogger(LOGGER_NAME).info(f'size of batch is {len(results)}')
     return results
 
 def execute_job(query_data, bulk=0, num_denom_factor=None, num_of_consts=None, num_of_cfs=None, degree=None, use_artificial=False):
-    logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_worker_{os.getpid()}'})
-    num_of_consts = num_of_consts if num_of_consts else DEFAULT_NUM_OF_CONSTANTS
-    num_of_cfs = num_of_cfs if num_of_cfs else DEFAULT_NUM_OF_CFS
-    degree = degree if degree else DEFAULT_DEGREE
-    use_artificial = use_artificial if use_artificial else DEFAULT_USE_ARTIFICIAL # kinda redundant, but whatever
-    logging.getLogger(LOGGER_NAME).info(f'checking against {num_of_consts} constants and {num_of_cfs} PCFs at a time, using degree-{degree} relations')
-    if degree[0] < (num_of_consts[0] + num_of_cfs[0]) * degree[1]:
-        degree[0] = (num_of_consts[0] + num_of_cfs[0]) * degree[1]
-        logging.getLogger(LOGGER_NAME).info(f'redundant degree detected! reducing to {degree}')
-    
-    polydegree, innerdegree = degree
-    exponents = list(c for c in map(Counter, chain.from_iterable(combinations_with_replacement(range(num_of_consts[0] + num_of_cfs[0]), i) for i in range(polydegree+1)))
-                     if not any(i for i in c.values() if i > innerdegree))
-    db_handle = ramanujan_db.RamanujanDB()
-    relations = []
-    num, strict = num_of_cfs
-    cf_subsets = combinations(query_data, num) if strict else chain.from_iterable(combinations(query_data, n) for n in range(1,num+1))
-    for cfs in cf_subsets:
-        # evaluate once to reuse over all subsets of constants
-        existing = list(r for r in db_handle.session.query(models.Relation) if set(c.cf_id for c in r.cfs) <= set(c.cf_id for c in cfs))
-        relation = check_cfs(cfs, num_of_consts, exponents, existing)
-        if relation:
-            relations.append(relation)
-        if not cf.scanned_algo:
-            cf.scanned_algo = dict()
-        cf.scanned_algo[ALGORITHM_NAME] = int(time.time())
-        # for postgres < 9.4
-        flag_modified(cf, 'scanned_algo')
-    logging.getLogger(LOGGER_NAME).info(f'finished - found {len(relations)} results')
-    db_handle.session.add_all(relations)
-    db_handle.session.commit()
-    db_handle.session.close()
-    
-    logging.getLogger(LOGGER_NAME).info(f'Commit done')
-    
-    return len(connections)
+    try:
+        logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_worker_{os.getpid()}'})
+        num_of_consts = num_of_consts if num_of_consts else DEFAULT_NUM_OF_CONSTANTS
+        num_of_cfs = num_of_cfs if num_of_cfs else DEFAULT_NUM_OF_CFS
+        degree = degree if degree else DEFAULT_DEGREE
+        use_artificial = use_artificial if use_artificial else DEFAULT_USE_ARTIFICIAL # kinda redundant, but whatever
+        logging.getLogger(LOGGER_NAME).info(f'checking against {num_of_consts} constants and {num_of_cfs} PCFs at a time, using degree-{degree} relations')
+        if degree[0] > (num_of_consts[0] + num_of_cfs[0]) * degree[1]:
+            degree = ((num_of_consts[0] + num_of_cfs[0]) * degree[1], degree[1])
+            logging.getLogger(LOGGER_NAME).info(f'redundant degree detected! reducing to {degree}')
+        
+        polydegree, innerdegree = degree
+        exponents = list(c for c in map(Counter, chain.from_iterable(combinations_with_replacement(range(num_of_consts[0] + num_of_cfs[0]), i) for i in range(polydegree+1)))
+                         if not any(i for i in c.values() if i > innerdegree))
+        db_handle = ramanujan_db.RamanujanDB()
+        relations = []
+        num, strict = num_of_cfs
+        cf_subsets = combinations(query_data, num) if strict else chain.from_iterable(combinations(query_data, n) for n in range(1,num+1))
+        for cfs in cf_subsets:
+            # evaluate once to reuse over all subsets of constants
+            existing = list(r for r in db_handle.session.query(models.Relation)
+                            if set(c.cf_id for c in r.cfs) <= set(c.cf_id for c in cfs) and r.details[0] <= polydegree and r.details[1] <= innerdegree)
+            relation = check_cfs(cfs, db_handle.constants, num_of_consts, exponents, degree, use_artificial, existing)
+            if relation:
+                relations.append(relation)
+            for cf in cfs:
+                if not cf.scanned_algo:
+                    cf.scanned_algo = dict()
+                cf.scanned_algo[ALGORITHM_NAME] = int(time.time())
+                # for postgres < 9.4
+                flag_modified(cf, 'scanned_algo')
+            db_handle.session.add_all(cfs)
+        logging.getLogger(LOGGER_NAME).info(f'finished - found {len(relations)} results')
+        db_handle.session.add_all(relations)
+        db_handle.session.commit()
+        db_handle.session.close()
+        
+        logging.getLogger(LOGGER_NAME).info(f'Commit done')
+        
+        return len(relations)
+    except Exception as e:
+        logging.getLogger(LOGGER_NAME).error(f'tf happened {e}')
 
 def summarize_results(results):
     logging.getLogger(LOGGER_NAME).info(f'In total found {sum(results)} relations')

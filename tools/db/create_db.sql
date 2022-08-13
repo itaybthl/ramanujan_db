@@ -1,11 +1,11 @@
 -- Creating DB
-CREATE DATABASE ramanujan
+CREATE DATABASE ramanujanv2
     WITH
     OWNER = postgres
 ;
 
 -- Use DB
-\c ramanujan
+\c ramanujanv2
 
 -- Add module for uuid
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -18,7 +18,7 @@ CREATE TABLE constant (
 	value NUMERIC NOT NULL,
 	precision INT NOT NULL,
 	trust REAL NOT NULL DEFAULT 1,
-	artificial BOOLEAN NOT NULL DEFAULT FALSE,
+	artificial INT NOT NULL DEFAULT 0,
 	lambda REAL DEFAULT 0,
 	delta REAL DEFAULT 0,
 	insertion_date timestamp DEFAULT current_timestamp

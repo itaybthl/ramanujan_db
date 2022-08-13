@@ -14,7 +14,7 @@ configuration = {
         'jobs_to_run': {
            'generate_cfs_random': {
                'args': { 'bulk': 5000, 'max_deg': 3, 'max_coeff': 50, 'num_denom_factor': (2, True)  },
-               'iterations': 1
+               'iterations': 2
                },
            'calculate_precision': {
                'args': { 'bulk': 1000, 'num_denom_factor': (2, True) },
@@ -23,7 +23,7 @@ configuration = {
                'cooldown': 30,
                'no_work_timeout': 60
                },
-            'relate': {
+            'poly_pslq': {
                'args': { 'bulk': 1000, 'num_denom_factor': (2, True), 'num_of_consts': (2, True), 'num_of_cfs': (1, True), 'degree': (2, 1), 'use_artificial': False },
                'run_async': True,
                'async_cores': 4,
@@ -33,8 +33,7 @@ configuration = {
             }
         }
 
-# If you make your own database, 'name' must match the name
-# in 'create_db.sql' in the line 'CREATE DATABASE <name>'
+# If you make your own database, 'name' must match the name in 'create_db.sql' in the line 'CREATE DATABASE <name>'
 db_configuration = {
         'host': '',
         'port': 5432,

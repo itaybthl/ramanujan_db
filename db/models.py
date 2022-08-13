@@ -19,7 +19,7 @@ class Constant(Base):
     value = Column(Numeric, nullable=False)
     precision = Column(Integer, nullable=False)
     trust = Column(Float, nullable=False, server_default=text("1"))
-    artificial = Column(Boolean, nullable=False, server_default=text("False"))
+    artificial = Column(Integer, nullable=False, server_default=text("0"))
     _lambda = Column('lambda', Float, server_default=text("0"))
     delta = Column(Float, server_default=text("0"))
     insertion_date = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))

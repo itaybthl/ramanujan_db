@@ -39,7 +39,8 @@ def check_int_null_vector2(constants, cf):
 
 def find_null_polynomial(poly):
     res = mp.pslq(poly)
-    if mp.almosteq(np.dot(poly, res), 0):
-        return res
-    print("False positive")
+    if res:
+        if mp.almosteq(np.dot(poly, res), 0):
+            return res
+        print("False positive")
     return None
