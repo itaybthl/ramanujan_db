@@ -7,6 +7,8 @@ Finds polynomial relations between constants and/or continued fractions in the D
                     will also be scanned).
 'num_of_consts': Tuple of the form (num: int, strict: bool), num is how many constants to relate, and
                  if strict then only relate exactly num constants, else relate 1..num constants.
+                 Since the code eliminates redundant constants, it may still find relations using
+                 less constants, so in practice there will probably be little benefit to nonstrict.
 'num_of_cfs': Similar to num_of_constants, but with CFs instead.
 'degree': Tuple of the form (polydegree: int, innerdegree: int). All relations are structured like
           multivariate polynomials over the constants and CFs, of degree polydegree with a maximum
@@ -27,8 +29,7 @@ Examples:
     'num_of_consts': (n, *), 'num_of_cfs': (m, *), 'degree': (n+m, 1)
         Find general multilinear relations. (for any nonnegative integers n,m)
 '''
-from db import models
-from db import ramanujan_db
+from db import models, ramanujan_db
 import mpmath as mp
 import time
 from sqlalchemy import Integer, or_, Float
@@ -39,11 +40,11 @@ import logging
 import logging.config
 import sys
 import os
-from itertools import chain, combinations, combinations_with_replacement
+from itertools import chain, combinations, combinations_with_replacement, takewhile
 from collections import Counter
 from functools import reduce
 from operator import mul
-import numpy as np
+import traceback
 
 mp.mp.dps = 2000
 
@@ -94,40 +95,69 @@ def poly_check(values, exponents):
     result = pslq_utils.find_null_polynomial(poly)
     
     if result:
-        indices_per_var = ((i[0] for i in enumerate(exponents) if i[1][j]) for j in range(num_of_consts[0] + num_of_cfs[0]))
-        if any(i for i in indices_per_var if not any(result[j] for j in i)):
-            logging.getLogger(LOGGER_NAME).info(f'Redundancy detected: relation is {result}')
-            return None # TODO maybe return the "reduced" relation anyway? With details on how to reduce it
-        # TODO check redundant degree too?
         logging.getLogger(LOGGER_NAME).info('Found relation')
 
     return result
 
+def compress_relation(result, cfs, consts, exponents, degree):
+    # will need to use later, so evaluating into lists
+    logging.getLogger(LOGGER_NAME).info(f'Original relation is {result}')
+    
+    indices_per_var = list(list(i[0] for i in enumerate(exponents) if i[1][j]) for j in range(len(cfs)+len(consts)))
+    redundant_vars = list(i[0] for i in enumerate(indices_per_var) if not any(result[j] for j in i[1]))
+    redundant_coeffs = set()
+    for redundant_var in redundant_vars: # remove redundant variables
+        logging.getLogger(LOGGER_NAME).info(f'Removing redundant variable #{redundant_var}')
+        redundant_coeffs |= set(indices_per_var[redundant_var])
+        if redundant_var >= len(consts):
+            cfs = cfs[:redundant_var - len(consts)] + cfs[redundant_var - len(consts) + 1:]
+        else:
+            consts = consts[:redundant_var] + consts[redundant_var + 1:]
+    
+    polydegree, innerdegree = degree # remove redundant degrees
+    indices_per_polydegree = list(list(i[0] for i in enumerate(exponents) if sum(i[1].values())==j) for j in range(polydegree+1))
+    redundant_polydegrees = list(i[0] for i in enumerate(indices_per_polydegree) if not any(result[j] for j in i[1]))
+    redundant_polydegrees = list(takewhile(lambda x: sum(x) == polydegree, enumerate(sorted(redundant_polydegrees, reverse=True))))
+    if redundant_polydegrees:
+        polydegree = redundant_polydegrees[-1][1] - 1
+    redundant_coeffs.update(*indices_per_polydegree[polydegree+1:])
+    
+    indices_per_innerdegree = list(list(i[0] for i in enumerate(exponents) if max(i[1].values(), default=0)==j) for j in range(innerdegree+1))
+    redundant_innerdegrees = list(i[0] for i in enumerate(indices_per_innerdegree) if not any(result[j] for j in i[1]))
+    redundant_innerdegrees = list(takewhile(lambda x: sum(x) == innerdegree, enumerate(sorted(redundant_innerdegrees, reverse=True))))
+    if redundant_innerdegrees:
+        innerdegree = redundant_innerdegrees[-1][1] - 1
+    redundant_coeffs.update(*indices_per_innerdegree[innerdegree+1:])
+    
+    degree = [polydegree, innerdegree]
+    logging.getLogger(LOGGER_NAME).info(f'True degree is {degree}')
+    for i in sorted(redundant_coeffs, reverse=True):
+        del result[i]
+    
+    logging.getLogger(LOGGER_NAME).info(f'Compressed relation is {result}')
+    return models.Relation(relation_type=ALGORITHM_NAME, details=degree+result, cfs=list(cfs), constants=list(consts))
+
 def check_cfs(cfs, constants, num_of_consts, exponents, degree, use_artificial, existing):
-    try:
-        logging.getLogger(LOGGER_NAME).info(f'checking cfs: {[(cf.partial_numerator, cf.partial_denominator) for cf in cfs]}')
-        relation = None
-        if not use_artificial: # just this line caused me so much trouble... doesn't seem like SQL handles booleans too well
-            constants = constants.filter(models.Constant.artificial == 0)
-        num, strict = num_of_consts # if strict then only check subsets of exactly num size, else check subsets of size 1..num
-        subsets = combinations(constants, num) if strict else chain.from_iterable(combinations(constants, n) for n in range(1,num+1))
-        subsets = list(subsets) # weird python idiosyncrasies mean this must be evaluated before being iterated on again
-        subsets = (consts for consts in subsets if not any(r for r in existing if set(c.constant_id for c in r.constants) <= set(c.constant_id for c in consts)))
-        for consts in subsets:
-            logging.getLogger(LOGGER_NAME).debug(f'checking consts {[const.name for const in consts]}')
-            mp.mp.dps = min([const.precision for const in consts] + [cf.precision_data.precision for cf in cfs]) * 9 // 10
-            result = poly_check([const.value for const in consts]
-                                + [mp.mpf(str(cf.precision_data.previous_calc[2])) / mp.mpf(str(cf.precision_data.previous_calc[3])) for cf in cfs],
-                                exponents)
-            if result:
-                if relation:
-                    # TODO: Report because we found 2 different constants
-                    logging.getLogger(LOGGER_NAME).critical(f'found connection to multiple constants. cf_id: {cf.cf_id}')
-                relation = models.Relation(connection_type=ALGORITHM_NAME, details=list(degree)+result, cfs=cfs, constants=consts)
-        
-        return relation
-    except Exception as e:
-        logging.getLogger(LOGGER_NAME).error(f'tf happened {e}')
+    logging.getLogger(LOGGER_NAME).info(f'checking cfs: {[(cf.partial_numerator, cf.partial_denominator) for cf in cfs]}')
+    relations = []
+    if not use_artificial: # just this line caused me so much trouble... doesn't seem like SQL handles booleans too well
+        constants = constants.filter(models.Constant.artificial == 0)
+    num, strict = num_of_consts # if strict then only check subsets of exactly num size, else check subsets of size 1..num
+    subsets = combinations(constants, num) if strict else chain.from_iterable(combinations(constants, n) for n in range(1,num+1))
+    subsets = list(subsets) # weird python idiosyncrasies mean this must be evaluated before being iterated on again
+    subsets = (consts for consts in subsets if not any(r for r in existing if set(c.constant_id for c in r.constants) <= set(c.constant_id for c in consts)))
+    for consts in subsets:
+        logging.getLogger(LOGGER_NAME).debug(f'checking consts {[const.name for const in consts]}')
+        mp.mp.dps = min([const.precision for const in consts] + [cf.precision_data.precision for cf in cfs]) * 9 // 10
+        result = poly_check([const.value for const in consts]
+                            + [mp.mpf(str(cf.precision_data.previous_calc[2])) / mp.mpf(str(cf.precision_data.previous_calc[3])) for cf in cfs],
+                            exponents)
+        if result:
+            if relations: # TODO: Report because we found 2 different constants
+                logging.getLogger(LOGGER_NAME).critical(f'found connection to multiple constants!!!')
+            relations.append(compress_relation(result, cfs, consts, exponents, degree))
+    
+    return relations
 
 def run_query(bulk=0, num_denom_factor=None, num_of_consts=None, num_of_cfs=None, degree=None, use_artificial=False):
     logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_manager'})
@@ -163,11 +193,11 @@ def execute_job(query_data, bulk=0, num_denom_factor=None, num_of_consts=None, n
         cf_subsets = combinations(query_data, num) if strict else chain.from_iterable(combinations(query_data, n) for n in range(1,num+1))
         for cfs in cf_subsets:
             # evaluate once to reuse over all subsets of constants
-            existing = list(r for r in db_handle.session.query(models.Relation)
+            existing = list(r for r in db_handle.session.query(models.Relation).all() + relations
                             if set(c.cf_id for c in r.cfs) <= set(c.cf_id for c in cfs) and r.details[0] <= polydegree and r.details[1] <= innerdegree)
-            relation = check_cfs(cfs, db_handle.constants, num_of_consts, exponents, degree, use_artificial, existing)
-            if relation:
-                relations.append(relation)
+            new_relations = check_cfs(cfs, db_handle.constants, num_of_consts, exponents, degree, use_artificial, existing)
+            if new_relations:
+                relations += new_relations
             for cf in cfs:
                 if not cf.scanned_algo:
                     cf.scanned_algo = dict()
@@ -184,7 +214,7 @@ def execute_job(query_data, bulk=0, num_denom_factor=None, num_of_consts=None, n
         
         return len(relations)
     except Exception as e:
-        logging.getLogger(LOGGER_NAME).error(f'tf happened {e}')
+        logging.getLogger(LOGGER_NAME).error(f'Exception in execute job: {traceback.format_exc()}')
 
 def summarize_results(results):
     logging.getLogger(LOGGER_NAME).info(f'In total found {sum(results)} relations')
