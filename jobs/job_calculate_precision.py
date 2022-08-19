@@ -81,7 +81,7 @@ class CfCalc(object):
         else:
             self.data = CalcData(*previous_calc)
 
-    def calc_iter(self, i, try_reduce=True): # TODO calculate many iterations forward! and also balance the matrix
+    def calc_iter(self, i, try_reduce=True):
         a = CfCalc.calculate_poly_depth(self.num, i+1)
         b = CfCalc.calculate_poly_depth(self.denom, i+1)
 

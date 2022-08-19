@@ -1,5 +1,5 @@
 # coding: utf-8
-from sqlalchemy import ARRAY,Column, DateTime, Float, ForeignKey, Integer, Numeric, String, UniqueConstraint, text, Table, Boolean
+from sqlalchemy import ARRAY, Column, DateTime, Float, ForeignKey, Integer, Numeric, String, UniqueConstraint, text, Table
 from sqlalchemy.sql.sqltypes import BigInteger
 from sqlalchemy.types import Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -33,6 +33,7 @@ class CfFamily(Base):
     constant = Column(ForeignKey('constant.constant_id'))
 
     constant1 = relationship('Constant')
+
 
 class Cf(Base):
     __tablename__ = 'cf'
@@ -76,12 +77,14 @@ class CfConstantConnection(Base):
     cf = relationship('Cf')
     constant = relationship('Constant')
 
+
 constant_in_relation_table = Table(
     "constant_in_relation",
     Base.metadata,
     Column('constant_id', ForeignKey('constant.constant_id'), primary_key=True),
     Column('relation_id', ForeignKey('relation.relation_id'), primary_key=True),
 )
+
 
 cf_in_relation_table = Table(
     "cf_in_relation",
@@ -90,10 +93,7 @@ cf_in_relation_table = Table(
     Column('relation_id', ForeignKey('relation.relation_id'), primary_key=True),
 )
 
-# TODO what if we just ditch the Constant table, decide everything is a PCF, and add a
-# nullable "name" column to the CF table that allows us to give names to special CFs?
-# This does make it somewhat inconvenient to add new named constants though, as it
-# requires us to find a PCF expansion of them first
+
 class Relation(Base):
     __tablename__ = 'relation'
 

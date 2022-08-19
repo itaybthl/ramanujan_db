@@ -1,5 +1,7 @@
 '''
-Finds polynomial relations between constants and/or continued fractions in the DB, using PSLQ. Configured as such:
+Finds polynomial relations between constants and/or continued fractions in the DB, using PSLQ.
+
+Configured as such:
 'bulk': How many CFs to scan. (since there can be many in the DB)
 'num_denom_factor': Tuple of the form (factor: int, strict: bool). Every PCF in the DB can be characterized
                     by the ratio between the degrees of its polynomials, so factor is either the exact ratio
