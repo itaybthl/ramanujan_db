@@ -3,18 +3,59 @@ import numpy as np
 import mpmath as mp
 from mpmath import mpf
 from decimal import Decimal, getcontext
+from typing import List
+
+class Primes:
+    __last__: int = 7 # last value tested for primality, used in __generate__
+    __list__: List = [2, 3, 5, 7]
+    
+    @staticmethod
+    def __sorted_in__(n, l): # implementation of "n in l" optimized for the case l is sorted (binary search!).
+        if len(l) == 0:
+            return False
+        mid = l[len(l) // 2]
+        if n == mid:
+            return True
+        if n < mid:
+            return __sorted_in__(n, l[:len(l) // 2])
+        return __sorted_in__(n, l[len(l) // 2 + 1:]) # n > mid
+
+    @staticmethod
+    def __is_prime__(n):
+        if Primes.__list__[-1] >= n:
+            return Primes.__sorted_in__(n, Primes.__list__)
+        i = 0
+        while i < len(Primes.__list__) and Primes.__list__[i] ** 2 < n:
+            if not n % Primes.__list__[i]:
+                return False
+            i += 1
+        return True
+
+    @staticmethod
+    def __generate__(): # one iteration of wheel factorization
+        inc = [4, 2, 4, 2, 4, 6, 2, 6]
+        for i in range(8):
+            Primes.__last__ += inc[i]
+            if Primes.__is_prime__(Primes.__last__):
+                Primes.__list__.append(Primes.__last__)
+    
+    @staticmethod
+    def get(i):
+        while len(Primes.__list__) <= i:
+            Primes.__generate__()
+        return Primes.__list__[i]
 
 class Constants:
-'''
-arbitrary-precision calculations of constants.
-
-This class aims to contain most of https://en.wikipedia.org/wiki/List_of_mathematical_constants, 
-excluding rationals, non-reals, and redundant constants (which are connected
-via (1,1)-degree or (2,1)-degree relations to other constants already in here).
-'''
-
-# If there's a WARNING, it's a constant that takes a long time to calculate to 4000 precision. Find ways to calculate it more efficiently, if possible.
-# If there's a TODO, it's a constant that needs to be added. Do that sometime.
+    '''
+    arbitrary-precision calculations of constants.
+    
+    This class aims to contain most of https://en.wikipedia.org/wiki/List_of_mathematical_constants, 
+    excluding rationals, non-reals, and redundant constants (which are connected
+    via (1,1)-degree or (2,1)-degree relations to other constants already in here).
+    '''
+    
+    # If there's a WARNING, it's a constant that takes a long time to calculate to 4000 precision. Find ways to calculate it more efficiently, if possible.
+    # If there's a TODO, it's a constant that needs to be added. Do that sometime.
 
     @staticmethod
     def set_precision(prec: int = 4000) -> None:
@@ -368,7 +409,12 @@ via (1,1)-degree or (2,1)-degree relations to other constants already in here).
         p2 = mp.cbrt(19 - r)
         return (1 + p1 + p2) / 3
     
-    # TODO Brun constant: need to iterate over twin primes...
+    #@staticmethod
+    #def B_2() -> mpf:
+    #    '''
+    #    brun constant, follows from brun's theorem
+    #    '''
+    #    # TODO need primes again... might not include this after all, since to get 13 significant digits you need all twin primes up to 10^16!
     
     @staticmethod
     def rho() -> mpf:
@@ -427,16 +473,11 @@ via (1,1)-degree or (2,1)-degree relations to other constants already in here).
     #    return mp.nsum(lambda n: n / mp.power(10, mp.nsum(lambda k: mp.ceil(mp.log(k + 1, 10)), [1, n])), [1, mp.inf])
     
     @staticmethod
-    def __calc_poly__(coeff_list, x):
-        # lower index = lower exponent, so this is reversed compared to the usual representation of polynomials! (with falling exponents...)
-        return mp.nsum(lambda n: coeff_list[int(n)] * x ** n, [0, len(coeff_list) - 1])
-    
-    @staticmethod
     def sigma_10() -> mpf:
         '''
         salem constant, smallest known Salem number.
         '''
-        return mp.findroot(lambda x: __calc_poly__([1, 1, 0, -1, -1, -1, -1, -1, 0, 1, 1], x), 1.2)
+        return mp.findroot(lambda x: mp.polyval([1, 1, 0, -1, -1, -1, -1, -1, 0, 1, 1], x), 1.2)
     
     @staticmethod
     def beta_Levy() -> mpf:
@@ -517,7 +558,7 @@ via (1,1)-degree or (2,1)-degree relations to other constants already in here).
         devicci tesseract constant, describing the
         largest cube that can pass through a 4D hypercube.
         '''
-        return mp.findroot(lambda x: __calc_poly__([16, 0, 16, 0, -7, 0, -28, 0, 4], x), 1)
+        return mp.findroot(lambda x: mp.polyval([4, 0, -28, 0, -7, 0, 16, 0, 16], x), 1)
     
     @staticmethod
     def C_N() -> mpf:
@@ -600,7 +641,7 @@ via (1,1)-degree or (2,1)-degree relations to other constants already in here).
         '''
         conway constant, related to the Look-and-say sequence.
         '''
-        return mp.findroot(lambda x: __calc_poly__([-6, 3, -6, 12, -4, 7, -7, 1, 0, 5, -2, -4, -12, 2, 7, 12, -7, -10, -4, 3, 9, -7, 0, -8, 14, -3, 9, 2, -3, -10, -2, -6, 1, 10, -3, 1, 7, -7, 7, -12, -5, 8, 6, 10, -8, -8, -7, -3, 9, 1, 6, 6, -2, -3, -10, -2, 3, 5, 2, -1, -1, -1, -1, -1, 1, 2, 2, -1, -2, -1, 0, 1], x) , 1.3)
+        return mp.findroot(lambda x: mp.polyval([1, 0, -1, -2, -1, 2, 2, 1, -1, -1, -1, -1, -1, 2, 5, 3, -2, -10, -3, -2, 6, 6, 1, 9, -3, -7, -8, -8, 10, 6, 8, -5, -12, 7, -7, 7, 1, -3, 10, 1, -6, -2, -10, -3, 2, 9, -3, 14, -8, 0, -7, 9, 3, -4, -10, -7, 12, 7, 2, -12, -4, -2, 5, 0, 1, -7, 7, -4, 12, -6, 3, -6], x) , 1.3)
     
     #@staticmethod
     #def sigma() -> mpf:

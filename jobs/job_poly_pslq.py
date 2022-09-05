@@ -137,6 +137,10 @@ def compress_relation(result, cfs, consts, exponents, degree):
         del result[i]
     
     logging.getLogger(LOGGER_NAME).info(f'Compressed relation is {result}')
+
+    # TODO now also manually test for smaller sub-relations! PSLQ is only guaranteed to return
+    # a small norm, but not guaranteed to return a 1-dimensional relation! see for example pslq([1,3,5])
+
     return models.Relation(relation_type=ALGORITHM_NAME, details=degree+result, cfs=list(cfs), constants=list(consts))
 
 def check_cfs(cfs, constants, num_of_consts, exponents, degree, use_artificial, existing):
