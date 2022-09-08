@@ -3,6 +3,7 @@ from db import ramanujan_db
 from decimal import Decimal
 import xlrd
 import os
+from tools.constants_generator import Constants
 
 script_dir = os.path.dirname(__file__) 
 rel_path = "constToDB.xls"
@@ -40,3 +41,27 @@ def insert_constants(filename=""):
    db_handle = ramanujan_db.RamanujanDB()
    db_handle.session.add_all(constants)
    db_handle.session.commit()
+
+def insert_constants_v2(precision=4000):
+    print(f'Using {precision} digits of precision')
+    Constants.set_precision(precision)
+    db_handle = ramanujan_db.RamanujanDB()
+    for x in Constants.__dict__.keys():
+        if x[0] == '_' or x == 'set_precision':
+            continue
+        print(f'Adding named constant {x}')
+        named_const = models.NamedConstant()
+        const_func = eval(f'Constants.{x}')
+        named_const.base = models.Constant()
+        if 'WARNING' not in const_func.__doc__: # too slow to calculate!!
+            if 'CAUTION' in const_func.__doc__:
+                print(f'Calculation of {x} is expected to take somewhat longer...')
+            named_const.base.precision = precision
+            named_const.base.value = Decimal(str(const_func()))
+        else:
+            print(f'Skipping calculation of {x}, too inefficient!')
+        named_const.name = x
+        named_const.description = const_func.__doc__[:const_func.__doc__.index('.\n')]
+        db_handle.session.add_all([named_const])
+    db_handle.session.commit()
+    db_handle.session.close()

@@ -54,7 +54,8 @@ class Constants:
     via (1,1)-degree or (2,1)-degree relations to other constants already in here).
     '''
     
-    # If there's a WARNING, it's a constant that takes a long time to calculate to 4000 precision. Find ways to calculate it more efficiently, if possible.
+    # If there's a WARNING or a CAUTION, it's a constant that takes a long (or somewhat long)
+    # time to calculate to 4000 precision. Find ways to calculate it more efficiently, if possible.
     # If there's a TODO, it's a constant that needs to be added. Do that sometime.
 
     @staticmethod
@@ -73,150 +74,25 @@ class Constants:
         return mp.pi()
     
     @staticmethod
+    def sqrt2() -> mpf:
+        '''
+        square root of 2, also called pythagoras constant.
+        '''
+        return mp.sqrt(2)
+    
+    @staticmethod
+    def sqrt3() -> mpf:
+        '''
+        square root of 3, also called theodorus constant.
+        '''
+        return mp.sqrt(3)
+    
+    @staticmethod
     def phi() -> mpf:
         '''
         golden ratio, positive root of phi^2 - phi - 1.
         '''
         return mp.phi()
-    
-    @staticmethod
-    def e() -> mpf:
-        '''
-        euler number, base of the natural logarithm.
-        '''
-        return mp.e()
-    
-    @staticmethod
-    def gamma() -> mpf:
-        '''
-        euler mascheroni constant, relating the harmonic series and the natural log.
-        '''
-        return mp.euler()
-    
-    @staticmethod
-    def C() -> mpf:
-        '''
-        catalan constant, important to combinatorics, topology, and more.
-        '''
-        return mp.catalan()
-    
-    @staticmethod
-    def Zeta3() -> mpf:
-        '''
-        apery constant, appears often in physics.
-        '''
-        return mp.apery()
-    
-    @staticmethod
-    def K0() -> mpf:
-        '''
-        khinchin constant, a surprising fundamental constant in continued fractions.
-        WARNING: Very inefficient to calculate! Handle with care!
-        '''
-        return mp.khinchin()
-    
-    @staticmethod
-    def A() -> mpf:
-        '''
-        glaisher kinkelin constant, related to gamma functions and zeta functions.
-        WARNING: Very inefficient to calculate! Handle with care!
-        '''
-        return mp.glaisher()
-    
-    @staticmethod
-    def M() -> mpf:
-        '''
-        meissel mertens constant, one of many constants relating prime numbers.
-        WARNING: Very inefficient to calculate! Handle with care!
-        '''
-        return mp.mertens()
-    
-    @staticmethod
-    def Pi2() -> mpf:
-        '''
-        twin primes constant, central to the twin primes conjecture.
-        WARNING: Very inefficient to calculate! Handle with care!
-        '''
-        return mp.twinprime()
-    
-    @staticmethod
-    def G025() -> mpf:
-        '''
-        gamma(0.25), appears often in other constants.
-        WARNING: Inefficient to calculate, but not as much as the others.
-        '''
-        return mp.gamma(0.25)
-    
-    @staticmethod
-    def G() -> mpf:
-        '''
-        gauss constant, related to Bernoulli's lemniscate.
-        '''
-        return 1 / mp.agm(1, mp.sqrt(2))
-    
-    @staticmethod
-    def L1() -> mpf:
-        '''
-        first lemniscate constant, related to Bernoulli's lemniscate.
-        '''
-        return Constants.G() * mp.pi / 2
-    
-    @staticmethod
-    def L2() -> mpf:
-        '''
-        second lemniscate constant, related to Bernoulli's lemniscate.
-        '''
-        return 0.5 / Constants.G()
-    
-    @staticmethod
-    def epi() -> mpf:
-        '''
-        gelfond constant, a result of the Gelfond-Schneider theorem.
-        '''
-        return mp.exp(mp.pi)
-    
-    @staticmethod
-    def P() -> mpf:
-        '''
-        universal parabolic constant, a fundamental ratio of parabolas.
-        '''
-        sqrt2 = mp.sqrt(2)
-        return mp.ln(1 + sqrt2) + sqrt2
-    
-    @staticmethod
-    def sqrt2() -> mpf:
-        '''
-        square root of 2, also called Pythagoras constant.
-        '''
-        return mp.sqrt(2)
-    
-    @staticmethod
-    def ln2() -> mpf:
-        '''
-        natural log of 2, has many series representations, and appears often in other constants.
-        '''
-        return mp.ln(2)
-    
-    #@staticmethod
-    #def delta() -> mpf:
-    #    '''
-    #    first feigenbaum constant, important to bifurcation theory.
-    #    '''
-    #    # TODO how the hell is this calculated
-    
-    #@staticmethod
-    #def alpha() -> mpf:
-    #    '''
-    #    second feigenbaum contsant, important to bifurcation theory.
-    #    '''
-    #    # TODO how the hell is this calculated
-    
-    @staticmethod
-    def sqrt3() -> mpf:
-        '''
-        square root of 3, also called Theodorus constant.
-        '''
-        return mp.sqrt(3)
     
     @staticmethod
     def cbrt2() -> mpf:
@@ -252,7 +128,7 @@ class Constants:
     @staticmethod
     def mu() -> mpf:
         '''
-        hexagonal lattice connective constant, largest root of mu^4 - 4mu^2 + 2
+        hexagonal lattice connective constant, largest root of mu^4 - 4mu^2 + 2.
         '''
         return mp.sqrt(2 + mp.sqrt(2))
     
@@ -272,7 +148,7 @@ class Constants:
     @staticmethod
     def W() -> mpf:
         '''
-        wallis constant, real root of W^3 - 2W - 5
+        wallis constant, real root of w^3 - 2w - 5.
         '''
         r = mp.sqrt(1929)
         p1 = mp.cbrt((45 + r) / 18)
@@ -280,10 +156,39 @@ class Constants:
         return p1 + p2
     
     @staticmethod
+    def e() -> mpf:
+        '''
+        euler number, base of the natural logarithm.
+        '''
+        return mp.e()
+    
+    @staticmethod
+    def ln2() -> mpf:
+        '''
+        natural log of 2, has many series representations, and appears often in other constants.
+        '''
+        return mp.ln(2)
+    
+    @staticmethod
+    def G025() -> mpf:
+        '''
+        gamma(0.25), appears often in other constants.
+        CAUTION: Inefficient to calculate, but not as much as the others.
+        '''
+        return mp.gamma(0.25)
+    
+    @staticmethod
+    def gamma() -> mpf:
+        '''
+        euler mascheroni constant, relating the harmonic series and the natural log.
+        '''
+        return mp.euler()
+    
+    @staticmethod
     def E() -> mpf:
         '''
-        erdos borwein constant, related to Mersenne numbers.
-        WARNING: Inefficient to calculate, but not as much as the others.
+        erdos borwein constant, related to mersenne numbers.
+        CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         def iteration(n):
             pow2 = mp.power(2, n)
@@ -293,14 +198,21 @@ class Constants:
     @staticmethod
     def Omega() -> mpf:
         '''
-        omega constant, real root of Omega * e^Omega - 1.
+        omega constant, real root of omega * e^omega - 1.
         '''
         return mp.lambertw(1)
     
     @staticmethod
+    def Zeta3() -> mpf:
+        '''
+        apery constant, appears often in physics.
+        '''
+        return mp.apery()
+    
+    @staticmethod
     def L_lim() -> mpf:
         '''
-        laplace limit, important to Kepler's equation.
+        laplace limit, important to kepler's equation.
         '''
         def equation(x):
             s = mp.hypot(x, 1)
@@ -315,9 +227,30 @@ class Constants:
         return mp.findroot(mp.li, 1.5)
     
     @staticmethod
+    def G() -> mpf:
+        '''
+        gauss constant, related to bernoulli's lemniscate.
+        '''
+        return 1 / mp.agm(1, mp.sqrt(2))
+    
+    @staticmethod
+    def L1() -> mpf:
+        '''
+        first lemniscate constant, related to bernoulli's lemniscate.
+        '''
+        return Constants.G() * mp.pi / 2
+    
+    @staticmethod
+    def L2() -> mpf:
+        '''
+        second lemniscate constant, related to bernoulli's lemniscate.
+        '''
+        return 0.5 / Constants.G()
+    
+    @staticmethod
     def L() -> mpf:
         '''
-        liouville constant, a special case of Liouville numbers.
+        liouville constant, a special case of liouville numbers.
         '''
         return mp.nsum(lambda n: mp.power(10, -mp.fac(n)), [1, mp.inf])
     
@@ -331,21 +264,52 @@ class Constants:
     @staticmethod
     def R() -> mpf:
         '''
-        ramanujan constant, an infamous almost-integer.
+        ramanujan constant, infamous almost-integer.
         '''
         return mp.exp(mp.pi * mp.sqrt(163))
     
     @staticmethod
+    def A() -> mpf:
+        '''
+        glaisher kinkelin constant, related to gamma functions and zeta functions.
+        WARNING: Very inefficient to calculate! Handle with care!
+        '''
+        return mp.glaisher()
+    
+    @staticmethod
+    def C() -> mpf:
+        '''
+        catalan constant, important to combinatorics, topology, and more.
+        '''
+        return mp.catalan()
+    
+    @staticmethod
     def D() -> mpf:
         '''
-        dottie number, real root of cos(D) - D (in radians).
+        dottie number, real root of cos(d) - d (in radians).
         '''
         return mp.findroot(lambda x: mp.cos(x) - x, 0.74)
     
     @staticmethod
+    def M() -> mpf:
+        '''
+        meissel mertens constant, one of many constants relating prime numbers.
+        WARNING: Very inefficient to calculate! Handle with care!
+        '''
+        return mp.mertens()
+    
+    @staticmethod
+    def P() -> mpf:
+        '''
+        universal parabolic constant, a fundamental ratio of parabolas.
+        '''
+        sqrt2 = mp.sqrt(2)
+        return mp.ln(1 + sqrt2) + sqrt2
+    
+    @staticmethod
     def C_Cahen() -> mpf:
         '''
-        cahen constant, related to the Sylvester sequence.
+        cahen constant, related to the sylvester sequence.
         '''
         sylvester_dict = dict() # caching the sylvester sequence makes this way faster
         def sylvester(k):
@@ -357,9 +321,16 @@ class Constants:
         return mp.nsum(lambda k: (-1)**k / (sylvester(k) - 1), [0, mp.inf])
     
     @staticmethod
+    def epi() -> mpf:
+        '''
+        gelfond constant, a result of the gelfond-schneider theorem.
+        '''
+        return mp.exp(mp.pi)
+    
+    @staticmethod
     def G_S() -> mpf:
         '''
-        gelfond schneider constant, also called the Hilbert number.
+        gelfond schneider constant, also called the hilbert number.
         '''
         return mp.power(2, mp.sqrt(2))
     
@@ -368,13 +339,13 @@ class Constants:
         '''
         golden angle, related to the golden ratio.
         '''
-        return 2 * mp.pi / (mp.phi ** 2)
+        return 2 * mp.pi / (1 + mp.phi)
     
     @staticmethod
     def S() -> mpf:
         '''
-        sierpinski constant, related to Gauss constant and Euler-Mascheroni constant.
-        WARNING: Inefficient to calculate, but not as much as the others.
+        sierpinski constant, related to gauss constant and euler-mascheroni constant.
+        CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.pi * (2 * mp.ln(2) + 3 * mp.ln(mp.pi) + 2 * mp.euler - 4 * mp.ln(mp.gamma(0.25)))
     
@@ -388,7 +359,8 @@ class Constants:
     @staticmethod
     def G_L() -> mpf:
         '''
-        gieseking constant, also called Lobachevsky constant.
+        gieseking constant, also called lobachevsky constant.
+        CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.clsin(2 , mp.pi / 3)
     
@@ -402,7 +374,7 @@ class Constants:
     @staticmethod
     def T() -> mpf:
         '''
-        tribonacci constant, real root of T^3 - T^2 - T - 1
+        tribonacci constant, real root of t^3 - t^2 - t - 1.
         '''
         r = 3 * mp.sqrt(33)
         p1 = mp.cbrt(19 + r)
@@ -415,6 +387,14 @@ class Constants:
     #    brun constant, follows from brun's theorem
     #    '''
     #    # TODO need primes again... might not include this after all, since to get 13 significant digits you need all twin primes up to 10^16!
+    
+    @staticmethod
+    def Pi2() -> mpf:
+        '''
+        twin primes constant, central to the twin primes conjecture.
+        WARNING: Very inefficient to calculate! Handle with care!
+        '''
+        return mp.twinprime()
     
     @staticmethod
     def rho() -> mpf:
@@ -475,9 +455,17 @@ class Constants:
     @staticmethod
     def sigma_10() -> mpf:
         '''
-        salem constant, smallest known Salem number.
+        salem constant, smallest known salem number.
         '''
         return mp.findroot(lambda x: mp.polyval([1, 1, 0, -1, -1, -1, -1, -1, 0, 1, 1], x), 1.2)
+    
+    @staticmethod
+    def K0() -> mpf:
+        '''
+        khinchin constant, a surprising fundamental constant in continued fractions.
+        WARNING: Very inefficient to calculate! Handle with care!
+        '''
+        return mp.khinchin()
     
     @staticmethod
     def beta_Levy() -> mpf:
@@ -487,7 +475,7 @@ class Constants:
         return mp.pi ** 2 / (12 * mp.ln(2))
     
     @staticmethod
-    def etothebeta() -> mpf:
+    def eLevy() -> mpf:
         '''
         second levy constant, related to asymptotic behavior in continued fractions.
         '''
@@ -517,7 +505,7 @@ class Constants:
     @staticmethod
     def V_dp() -> mpf:
         '''
-        van der pauw constant, involved in the Van der Pauw method.
+        van der pauw constant, involved in the van der pauw method.
         '''
         return mp.pi / mp.ln(2)
     
@@ -531,15 +519,15 @@ class Constants:
     #@staticmethod
     #def C_Artin() -> mpf:
     #    '''
-    #    artin constant, related to Artin's conjecture on primitive roots.
+    #    artin constant, related to artin's conjecture on primitive roots.
     #    '''
     #    # TODO need primes again...
     
     @staticmethod
     def C_P() -> mpf:
         '''
-        porter constant, related to the efficiency of Euclid algorithm.
-        WARNING: Inefficient to calculate, but not as much as the others.
+        porter constant, related to the efficiency of euclid algorithm.
+        CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         ln2 = mp.ln(2)
         pi2 = mp.pi ** 2
@@ -548,15 +536,14 @@ class Constants:
     @staticmethod
     def L_Lochs() -> mpf:
         '''
-        lochs constant, involved in Lochs' theorem regarding continued fractions.
+        lochs constant, involved in lochs' theorem regarding continued fractions.
         '''
         return 6 * mp.ln(2) * mp.ln(10) / mp.pi ** 2
     
     @staticmethod
     def D_V() -> mpf:
         '''
-        devicci tesseract constant, describing the
-        largest cube that can pass through a 4D hypercube.
+        devicci tesseract constant, describing the largest cube that can pass through a 4d hypercube.
         '''
         return mp.findroot(lambda x: mp.polyval([4, 0, -28, 0, -7, 0, 16, 0, 16], x), 1)
     
@@ -588,10 +575,17 @@ class Constants:
     @staticmethod
     def psi_Fib() -> mpf:
         '''
-        reciprocal fibonacci constant, sum of reciprocals of Fibonacci numbers.
+        reciprocal fibonacci constant, sum of reciprocals of fibonacci numbers.
         WARNING: Very inefficient to calculate! Handle with care!
         ''' # consider using gosper's accelerated series?
         return mp.nsum(lambda n: 1 / mp.fib(n), [1, mp.inf])
+    
+    #@staticmethod
+    #def delta() -> mpf:
+    #    '''
+    #    first feigenbaum constant, important to bifurcation theory.
+    #    '''
+    #    # TODO how the hell is this calculated
     
     @staticmethod
     def Delta3() -> mpf:
@@ -609,17 +603,24 @@ class Constants:
     def W_S() -> mpf:
         '''
         weierstrass constant.
-        WARNING: Inefficient to calculate, but not as much as the others.
+        CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.power(2, 1.25) * mp.sqrt(mp.pi) * mp.exp(mp.pi / 8) / mp.gamma(0.25) ** 2
     
     @staticmethod
     def F() -> mpf:
         '''
-        fransen robinson constant, related to the reciprocal Gamma function.
+        fransen robinson constant, related to the reciprocal gamma function.
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.quad(mp.rgamma, [0, mp.inf])
+    
+    #@staticmethod
+    #def alpha() -> mpf:
+    #    '''
+    #    second feigenbaum contsant, important to bifurcation theory.
+    #    '''
+    #    # TODO how the hell is this calculated
     
     @staticmethod
     def C_2() -> mpf:
@@ -639,7 +640,7 @@ class Constants:
     @staticmethod
     def lambda_C() -> mpf:
         '''
-        conway constant, related to the Look-and-say sequence.
+        conway constant, related to the look-and-say sequence.
         '''
         return mp.findroot(lambda x: mp.polyval([1, 0, -1, -2, -1, 2, 2, 1, -1, -1, -1, -1, -1, 2, 5, 3, -2, -10, -3, -2, 6, 6, 1, 9, -3, -7, -8, -8, 10, 6, 8, -5, -12, 7, -7, 7, 1, -3, 10, 1, -6, -2, -10, -3, 2, 9, -3, 14, -8, 0, -7, 9, 3, -4, -10, -7, 12, 7, 2, -12, -4, -2, 5, 0, 1, -7, 7, -4, 12, -6, 3, -6], x) , 1.3)
     
@@ -660,7 +661,7 @@ class Constants:
     #@staticmethod
     #def V() -> mpf:
     #    '''
-    #    viswanath constant, related to random Fibonacci sequences.
+    #    viswanath constant, related to random fibonacci sequences.
     #    '''
     #    # TODO how the hell is this calculated
     
@@ -668,7 +669,7 @@ class Constants:
     def q() -> mpf:
         '''
         komornik loreti constant, related to non-integer representations.
-        WARNING: Inefficient to calculate, but not as much as the others.
+        CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.findroot(lambda q: mp.nprod(lambda n: 1 - mp.power(q, -mp.power(2, n)), [0, mp.inf]) + (q - 2) / (q - 1), 2)
     
@@ -682,7 +683,7 @@ class Constants:
     @staticmethod
     def S_MRB() -> mpf:
         '''
-        mrb constant, named after Marvin Ray Burns.
+        mrb constant, named after marvin ray burns.
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.nsum(lambda n: mp.power(-1, n) * (mp.root(n, n) - 1), [1, mp.inf])
@@ -697,7 +698,7 @@ class Constants:
     @staticmethod
     def sigma_S() -> mpf:
         '''
-        somos quadratic recurrence constant, related to the Lerch transcendent.
+        somos quadratic recurrence constant, related to the lerch transcendent.
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.nprod(lambda n: mp.power(n, mp.power(2, -n)), [1, mp.inf])
@@ -713,14 +714,14 @@ class Constants:
     def L_D() -> mpf:
         '''
         unit disk logarithmic capacity.
-        WARNING: Inefficient to calculate, but not as much as the others.
+        CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.power(mp.gamma(0.25), 2) / (4 * mp.power(mp.pi, 1.5))
     
     #@staticmethod
     #def rho_Pi() -> mpf:
     #    '''
-    #    taniguchi constant, a kind of Euler product.
+    #    taniguchi constant, a kind of euler product.
     #    '''
     #    # TODO need primes again...
 
