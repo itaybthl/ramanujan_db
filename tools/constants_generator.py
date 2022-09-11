@@ -51,7 +51,7 @@ class Constants:
     
     This class aims to contain most of https://en.wikipedia.org/wiki/List_of_mathematical_constants, 
     excluding rationals, non-reals, and redundant constants (which are connected
-    via (1,1)-degree or (2,1)-degree relations to other constants already in here).
+    via (2,2)-degree relations to other constants already in here).
     '''
     
     # If there's a WARNING or a CAUTION, it's a constant that takes a long (or somewhat long)

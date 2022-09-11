@@ -26,15 +26,11 @@ def get_degrees(max_deg, num_denom_factor):
     return (high_deg, low_deg) if factor > 0 else (low_deg, high_deg)
 
 def generate_poly(max_deg, max_coeff, num_denom_factor):
-    a_n = []
-    b_n = []
     num_deg, denom_deg = get_degrees(max_deg, num_denom_factor)
-
-    while not any(a_n) and len(a_n) != num_deg + 1:
-        a_n = np.trim_zeros(np.random.choice(range(-max_coeff, max_coeff), num_deg + 1), 'f')
-    while not any(b_n) and len(b_n) != denom_deg + 1:
-        b_n = np.trim_zeros(np.random.choice(range(-max_coeff, max_coeff), denom_deg + 1), 'f')
-
+    coeffs = range(-max_coeff, max_coeff)
+    coeffs_nonzero = [x for x in coeffs if x != 0]
+    a_n = np.concatenate((np.random.choice(coeffs_nonzero, 1), np.random.choice(coeffs, num_deg)))
+    b_n = np.concatenate((np.random.choice(coeffs_nonzero, 1), np.random.choice(coeffs, denom_deg)))
     return a_n, b_n
 
 def execute_job(bulk=0, max_deg=-1, max_coeff=-1, num_denom_factor=None):
