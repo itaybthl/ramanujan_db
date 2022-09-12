@@ -39,7 +39,7 @@ class PcfCanonicalConstant(Base):
     const_id = Column(ForeignKey('constant.const_id'), primary_key=True)
     p = Column(ARRAY(Numeric()), nullable=False)
     q = Column(ARRAY(Numeric()), nullable=False)
-    last_matrix = Column(ARRAY(Numeric()), nullable=False)
+    last_matrix = Column(ARRAY(Numeric()))
     depth = Column(Integer)
     
     base = relationship('Constant')
