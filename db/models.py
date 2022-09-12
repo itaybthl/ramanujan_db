@@ -32,6 +32,9 @@ class NamedConstant(Base):
 
 class PcfCanonicalConstant(Base):
     __tablename__ = 'pcf_canonical_constant'
+    __table_args__ = (
+        UniqueConstraint('p', 'q'),
+    )
 
     const_id = Column(ForeignKey('constant.const_id'), primary_key=True)
     p = Column(ARRAY(Numeric()), nullable=False)

@@ -5,46 +5,9 @@ from mpmath import mpf
 from decimal import Decimal, getcontext
 from typing import List
 
-class Primes:
-    __last__: int = 7 # last value tested for primality, used in __generate__
-    __list__: List = [2, 3, 5, 7]
-    
-    @staticmethod
-    def __sorted_in__(n, l): # implementation of "n in l" optimized for the case l is sorted (binary search!).
-        if len(l) == 0:
-            return False
-        mid = l[len(l) // 2]
-        if n == mid:
-            return True
-        if n < mid:
-            return __sorted_in__(n, l[:len(l) // 2])
-        return __sorted_in__(n, l[len(l) // 2 + 1:]) # n > mid
-
-    @staticmethod
-    def __is_prime__(n):
-        if Primes.__list__[-1] >= n:
-            return Primes.__sorted_in__(n, Primes.__list__)
-        i = 0
-        while i < len(Primes.__list__) and Primes.__list__[i] ** 2 < n:
-            if not n % Primes.__list__[i]:
-                return False
-            i += 1
-        return True
-
-    @staticmethod
-    def __generate__(): # one iteration of wheel factorization
-        inc = [4, 2, 4, 2, 4, 6, 2, 6]
-        for i in range(8):
-            Primes.__last__ += inc[i]
-            if Primes.__is_prime__(Primes.__last__):
-                Primes.__list__.append(Primes.__last__)
-    
-    @staticmethod
-    def get(i):
-        while len(Primes.__list__) <= i:
-            Primes.__generate__()
-        return Primes.__list__[i]
-
+# TODO use sympy for primes!
+# TODO consider using gosper's acceleration of series?
+# TODO in general, nprod and nsum seem to be faster when using direct method  (and sometimes this is even the only correct way). investigate other methods sometime?
 class Constants:
     '''
     arbitrary-precision calculations of constants.
@@ -139,11 +102,10 @@ class Constants:
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         def iteration(k):
-            k *= 2
-            z = mp.zeta(k)
-            pow2 = mp.power(2, k)
-            return (pow2 - 1) / k * z * (z - 1 - 1 / pow2)
-        return mp.exp(-2 * mp.nsum(iteration, [1, mp.inf]))
+            z = mp.zeta(2 * k)
+            pow2 = mp.power(2, 2 * k)
+            return (pow2 - 1) / (2 * k) * z * (z - 1 - 1 / pow2)
+        return mp.exp(-2 * mp.nsum(iteration, [1, mp.inf], method='d'))
     
     @staticmethod
     def W() -> mpf:
@@ -188,12 +150,11 @@ class Constants:
     def E() -> mpf:
         '''
         erdos borwein constant, related to mersenne numbers.
-        CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         def iteration(n):
             pow2 = mp.power(2, n)
             return mp.power(pow2, -n) * (pow2 + 1) / (pow2 - 1)
-        return mp.nsum(iteration, [1, mp.inf], method='l')
+        return mp.nsum(iteration, [1, mp.inf], method='d')
     
     @staticmethod
     def Omega() -> mpf:
@@ -252,7 +213,7 @@ class Constants:
         '''
         liouville constant, a special case of liouville numbers.
         '''
-        return mp.nsum(lambda n: mp.power(10, -mp.fac(n)), [1, mp.inf])
+        return mp.nsum(lambda n: mp.power(10, -mp.fac(n)), [1, mp.inf], method='d')
     
     @staticmethod
     def C_1() -> mpf:
@@ -318,7 +279,7 @@ class Constants:
             res = mpf(2) if k == 0 else 1 + mp.nprod(sylvester, [0, k - 1])
             sylvester_dict[k] = res
             return res
-        return mp.nsum(lambda k: (-1)**k / (sylvester(k) - 1), [0, mp.inf])
+        return mp.nsum(lambda k: (-1)**k / (sylvester(k) - 1), [0, mp.inf], method='d')
     
     @staticmethod
     def epi() -> mpf:
@@ -352,7 +313,7 @@ class Constants:
     #@staticmethod
     #def L_R() -> mpf:
     #    '''
-    #    landau ramanujan constant, central to a theorem by Edmund Landau.
+    #    landau ramanujan constant, central to a theorem by edmund landau.
     #    '''
     #    # TODO implement prime sieve, then iterate over primes congruent 1 mod 4...
     
@@ -435,7 +396,7 @@ class Constants:
     #    '''
     #    # TODO this code seems right but gives wrong result???
     #    s = -mp.digamma(0.5)
-    #    return 4 / mp.pi ** 2 * (mp.nsum(lambda k: 2 * mp.ln(k) / (4 * mp.power(k, 2) - 1), [1, mp.inf]) + s)
+    #    return 4 / mp.pi ** 2 * (mp.nsum(lambda k: 2 * mp.ln(k) / (4 * mp.power(k, 2) - 1), [1, mp.inf], method='d') + s)
     
     #@staticmethod
     #def C_FT() -> mpf:
@@ -444,13 +405,17 @@ class Constants:
     #    '''
     #    # TODO need primes again...
     
-    #@staticmethod
-    #def C_10() -> mpf:
-    #    '''
-    #    base10 champernowne constant.
-    #    '''
-    #    # TODO this code seems right but gives wrong result???
-    #    return mp.nsum(lambda n: n / mp.power(10, mp.nsum(lambda k: mp.ceil(mp.log(k + 1, 10)), [1, n])), [1, mp.inf])
+    @staticmethod
+    def C_10() -> mpf:
+        '''
+        base10 champernowne constant.
+        '''
+        res = '0.'
+        i = 1
+        while len(res) < mp.mp.dps:
+            res += str(i)
+            i += 1
+        return mpf(res)
     
     @staticmethod
     def sigma_10() -> mpf:
@@ -553,7 +518,7 @@ class Constants:
         niven constant, largest exponent in prime factorizations "on average".
         WARNING: Very inefficient to calculate! Handle with care!
         '''
-        return 1 + mp.nsum(lambda n: 1 - 1 / mp.zeta(n), [2, mp.inf])
+        return 1 + mp.nsum(lambda n: 1 - 1 / mp.zeta(n), [2, mp.inf], method='d')
     
     #@staticmethod
     #def S_Pi() -> mpf:
@@ -570,22 +535,22 @@ class Constants:
         def iteration(n):
             two_n = mp.power(2, n)
             return mp.power(2, -two_n) / (1 - mp.power(2, -4 * two_n))
-        return mp.nsum(iteration, [0, mp.inf])
+        return mp.nsum(iteration, [0, mp.inf], method='d')
     
     @staticmethod
     def psi_Fib() -> mpf:
         '''
         reciprocal fibonacci constant, sum of reciprocals of fibonacci numbers.
-        WARNING: Very inefficient to calculate! Handle with care!
-        ''' # consider using gosper's accelerated series?
-        return mp.nsum(lambda n: 1 / mp.fib(n), [1, mp.inf])
+        CAUTION: Inefficient to calculate, but not as much as the others.
+        '''
+        return mp.nsum(lambda n: 1 / mp.fib(n), [1, mp.inf], method='d')
     
     #@staticmethod
     #def delta() -> mpf:
     #    '''
     #    first feigenbaum constant, important to bifurcation theory.
     #    '''
-    #    # TODO how the hell is this calculated
+    #    # TODO how the hell is this calculated? maybe https://rosettacode.org/wiki/Feigenbaum_constant_calculation#Python
     
     @staticmethod
     def Delta3() -> mpf:
@@ -620,7 +585,7 @@ class Constants:
     #    '''
     #    second feigenbaum contsant, important to bifurcation theory.
     #    '''
-    #    # TODO how the hell is this calculated
+    #    # TODO how the hell is this calculated? maybe https://github.com/brorson/FeigenbaumConstants
     
     @staticmethod
     def C_2() -> mpf:
@@ -701,7 +666,7 @@ class Constants:
         somos quadratic recurrence constant, related to the lerch transcendent.
         WARNING: Very inefficient to calculate! Handle with care!
         '''
-        return mp.nprod(lambda n: mp.power(n, mp.power(2, -n)), [1, mp.inf])
+        return mp.nprod(lambda n: mp.power(n, mp.power(2, -n)), [1, mp.inf], method='d')
     
     #@staticmethod
     #def alpha_F() -> mpf:

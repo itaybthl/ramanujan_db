@@ -1,11 +1,11 @@
 -- Creating DB
-CREATE DATABASE test
+CREATE DATABASE ramanujanv3
     WITH
     OWNER = postgres
 ;
 
 -- Use DB
-\c test
+\c ramanujanv3
 
 -- Add module for uuid
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -30,7 +30,9 @@ CREATE TABLE pcf_canonical_constant (
 	p INT[] NOT NULL,
 	q INT[] NOT NULL,
 	last_matrix INT[],
-	depth INT
+	depth INT,
+	
+	UNIQUE(p, q)
 );
 
 CREATE TABLE scan_history (
