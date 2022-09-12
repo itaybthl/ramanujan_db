@@ -19,7 +19,7 @@ class RamanujanDB(object):
 
     @property
     def cfs(self):
-        return self.session.query(models.Cf).order_by(models.Cf.cf_id)
+        return self.session.query(models.PcfCanonicalConstant).order_by(models.PcfCanonicalConstant.const_id)
 
     def add_cfs(self, cf_list, conflict=False):
         if not conflict:
