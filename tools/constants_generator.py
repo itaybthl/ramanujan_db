@@ -310,12 +310,13 @@ class Constants:
         '''
         return mp.pi * (2 * mp.ln(2) + 3 * mp.ln(mp.pi) + 2 * mp.euler - 4 * mp.ln(mp.gamma(0.25)))
     
-    #@staticmethod
-    #def L_R() -> mpf:
-    #    '''
-    #    landau ramanujan constant, central to a theorem by edmund landau.
-    #    '''
-    #    # TODO implement prime sieve, then iterate over primes congruent 1 mod 4...
+    @staticmethod
+    def L_R() -> mpf:
+        '''
+        landau ramanujan constant, central to a theorem by edmund landau.
+        WARNING: This is not a calculation!
+        ''' # TODO implement prime sieve, then iterate over primes congruent 1 mod 4...
+        return mp.mpf('0.76422365358922066299')
     
     @staticmethod
     def G_L() -> mpf:
@@ -325,12 +326,13 @@ class Constants:
         '''
         return mp.clsin(2 , mp.pi / 3)
     
-    #@staticmethod
-    #def beta() -> mpf:
-    #    '''
-    #    bernstein constant, describing errors of best uniform approximations.
-    #    '''
-    #    # TODO implement Varga&Carpenter algorithm?
+    @staticmethod
+    def beta() -> mpf:
+        '''
+        bernstein constant, describing errors of best uniform approximations.
+        WARNING: This is not a calculation!
+        ''' # TODO implement Varga&Carpenter algorithm?
+        return mp.mpf('0.28016949902386913303')
     
     @staticmethod
     def T() -> mpf:
@@ -342,12 +344,13 @@ class Constants:
         p2 = mp.cbrt(19 - r)
         return (1 + p1 + p2) / 3
     
-    #@staticmethod
-    #def B_2() -> mpf:
-    #    '''
-    #    brun constant, follows from brun's theorem
-    #    '''
-    #    # TODO need primes again... might not include this after all, since to get 13 significant digits you need all twin primes up to 10^16!
+    @staticmethod
+    def B_2() -> mpf:
+        '''
+        brun constant, follows from brun's theorem.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again... might not include this after all, since to get 13 significant digits you need all twin primes up to 10^16!
+        return mp.mpf('1.902160583104')
     
     @staticmethod
     def Pi2() -> mpf:
@@ -389,21 +392,24 @@ class Constants:
         '''
         return mp.quad(lambda x: mp.exp(mp.li(x)), [0, 1])
     
-    #@staticmethod
-    #def c() -> mpf:
-    #    '''
-    #    asymptotic lebesgue constant.
-    #    '''
-    #    # TODO this code seems right but gives wrong result???
-    #    s = -mp.digamma(0.5)
-    #    return 4 / mp.pi ** 2 * (mp.nsum(lambda k: 2 * mp.ln(k) / (4 * mp.power(k, 2) - 1), [1, mp.inf], method='d') + s)
+    @staticmethod
+    def c() -> mpf:
+        '''
+        asymptotic lebesgue constant.
+        WARNING: This is not a calculation!
+        '''
+        ## TODO this code seems right but gives wrong result???
+        #s = -mp.digamma(0.5)
+        #return 4 / mp.pi ** 2 * (mp.nsum(lambda k: 2 * mp.ln(k) / (4 * mp.power(k, 2) - 1), [1, mp.inf], method='d') + s)
+        return mp.mpf('0.98943127383114695174')
     
-    #@staticmethod
-    #def C_FT() -> mpf:
-    #    '''
-    #    feller tornier constant, describing certain prime factorizations
-    #    '''
-    #    # TODO need primes again...
+    @staticmethod
+    def C_FT() -> mpf:
+        '''
+        feller tornier constant, describing certain prime factorizations.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again...
+        return mp.mpf('0.66131704946962233528')
     
     @staticmethod
     def C_10() -> mpf:
@@ -446,19 +452,21 @@ class Constants:
         '''
         return mp.exp(Constants.beta_Levy())
     
-    #@staticmethod
-    #def C_CE() -> mpf:
-    #    '''
-    #    copeland erdos constant.
-    #    '''
-    #    # TODO need primes again...
+    @staticmethod
+    def C_CE() -> mpf:
+        '''
+        copeland erdos constant.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again...
+        return mp.mpf('0.23571113171923293137')
     
-    #@staticmethod
-    #def A_Pi() -> mpf:
-    #    '''
-    #    mills constant, "smallest" real that generates prime numbers via exponents.
-    #    '''
-    #    # TODO how the hell is this calculated
+    @staticmethod
+    def A_Pi() -> mpf:
+        '''
+        mills constant, "smallest" real that generates prime numbers via exponents.
+        WARNING: This is not a calculation!
+        ''' # TODO how the hell is this calculated
+        return mp.mpf('1.30637788386308069046')
     
     @staticmethod
     def delta_G() -> mpf:
@@ -481,12 +489,13 @@ class Constants:
         '''
         return mp.atan(mp.sqrt(2))
     
-    #@staticmethod
-    #def C_Artin() -> mpf:
-    #    '''
-    #    artin constant, related to artin's conjecture on primitive roots.
-    #    '''
-    #    # TODO need primes again...
+    @staticmethod
+    def C_Artin() -> mpf:
+        '''
+        artin constant, related to artin's conjecture on primitive roots.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again...
+        return mp.mpf('0.37395581361920228805')
     
     @staticmethod
     def C_P() -> mpf:
@@ -520,12 +529,13 @@ class Constants:
         '''
         return 1 + mp.nsum(lambda n: 1 - 1 / mp.zeta(n), [2, mp.inf], method='d')
     
-    #@staticmethod
-    #def S_Pi() -> mpf:
-    #    '''
-    #    stephens constant, density of some subsets of primes.
-    #    '''
-    #    # TODO need primes again...
+    @staticmethod
+    def S_Pi() -> mpf:
+        '''
+        stephens constant, density of some subsets of primes.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again...
+        return mp.mpf('0.57595996889294543964')
     
     @staticmethod
     def P_Dragon() -> mpf:
@@ -545,12 +555,13 @@ class Constants:
         '''
         return mp.nsum(lambda n: 1 / mp.fib(n), [1, mp.inf], method='d')
     
-    #@staticmethod
-    #def delta() -> mpf:
-    #    '''
-    #    first feigenbaum constant, important to bifurcation theory.
-    #    '''
-    #    # TODO how the hell is this calculated? maybe https://rosettacode.org/wiki/Feigenbaum_constant_calculation#Python
+    @staticmethod
+    def delta() -> mpf:
+        '''
+        first feigenbaum constant, important to bifurcation theory.
+        WARNING: This is not a calculation!
+        ''' # TODO how the hell is this calculated? maybe https://rosettacode.org/wiki/Feigenbaum_constant_calculation#Python
+        return mp.mpf('4.66920160910299067185')
     
     @staticmethod
     def Delta3() -> mpf:
@@ -580,12 +591,13 @@ class Constants:
         '''
         return mp.quad(mp.rgamma, [0, mp.inf])
     
-    #@staticmethod
-    #def alpha() -> mpf:
-    #    '''
-    #    second feigenbaum contsant, important to bifurcation theory.
-    #    '''
-    #    # TODO how the hell is this calculated? maybe https://github.com/brorson/FeigenbaumConstants
+    @staticmethod
+    def alpha() -> mpf:
+        '''
+        second feigenbaum contsant, important to bifurcation theory.
+        WARNING: This is not a calculation!
+        ''' # TODO how the hell is this calculated? maybe https://github.com/brorson/FeigenbaumConstants
+        return mp.mpf('2.50290787509589282228')
     
     @staticmethod
     def C_2() -> mpf:
@@ -609,26 +621,29 @@ class Constants:
         '''
         return mp.findroot(lambda x: mp.polyval([1, 0, -1, -2, -1, 2, 2, 1, -1, -1, -1, -1, -1, 2, 5, 3, -2, -10, -3, -2, 6, 6, 1, 9, -3, -7, -8, -8, 10, 6, 8, -5, -12, 7, -7, 7, 1, -3, 10, 1, -6, -2, -10, -3, 2, 9, -3, 14, -8, 0, -7, 9, 3, -4, -10, -7, 12, 7, 2, -12, -4, -2, 5, 0, 1, -7, 7, -4, 12, -6, 3, -6], x) , 1.3)
     
-    #@staticmethod
-    #def sigma() -> mpf:
-    #    '''
-    #    hafner sarnak mccurley constant, related to coprime determinants of integer matrices.
-    #    '''
-    #    # TODO need primes again...
+    @staticmethod
+    def sigma() -> mpf:
+        '''
+        hafner sarnak mccurley constant, related to coprime determinants of integer matrices.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again...
+        return mp.mpf('0.35323637185499598454')
     
-    #@staticmethod
-    #def B_H() -> mpf:
-    #    '''
-    #    backhouse constant, constructed using power series with prime coefficients.
-    #    '''
-    #    # TODO how the hell is this calculated
+    @staticmethod
+    def B_H() -> mpf:
+        '''
+        backhouse constant, constructed using power series with prime coefficients.
+        WARNING: This is not a calculation!
+        ''' # TODO how the hell is this calculated
+        return mp.mpf('1.45607494858268967139')
     
-    #@staticmethod
-    #def V() -> mpf:
-    #    '''
-    #    viswanath constant, related to random fibonacci sequences.
-    #    '''
-    #    # TODO how the hell is this calculated
+    @staticmethod
+    def V() -> mpf:
+        '''
+        viswanath constant, related to random fibonacci sequences.
+        WARNING: This is not a calculation!
+        ''' # TODO how the hell is this calculated
+        return mp.mpf('1.1319882487943')
     
     @staticmethod
     def q() -> mpf:
@@ -638,12 +653,13 @@ class Constants:
         '''
         return mp.findroot(lambda q: mp.nprod(lambda n: 1 - mp.power(q, -mp.power(2, n)), [0, mp.inf]) + (q - 2) / (q - 1), 2)
     
-    #@staticmethod
-    #def C_HBM() -> mpf:
-    #    '''
-    #    heath brown moroz constant, related to the cubic surface w^3 = xyz
-    #    '''
-    #    # TODO need primes again...
+    @staticmethod
+    def C_HBM() -> mpf:
+        '''
+        heath brown moroz constant, related to the cubic surface w^3 = xyz.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again...
+        return mp.mpf('0.00131764115485317810')
     
     @staticmethod
     def S_MRB() -> mpf:
@@ -653,12 +669,13 @@ class Constants:
         '''
         return mp.nsum(lambda n: mp.power(-1, n) * (mp.root(n, n) - 1), [1, mp.inf])
     
-    #@staticmethod
-    #def rho_Pi() -> mpf:
-    #    '''
-    #    prime constant, constructed from indicators of prime numbers.
-    #    '''
-    #    # TODO need primes again...
+    @staticmethod
+    def rho_Pi() -> mpf:
+        '''
+        prime constant, constructed from indicators of prime numbers.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again...
+        return mp.mpf('0.41468250985111166024')
     
     @staticmethod
     def sigma_S() -> mpf:
@@ -668,12 +685,13 @@ class Constants:
         '''
         return mp.nprod(lambda n: mp.power(n, mp.power(2, -n)), [1, mp.inf], method='d')
     
-    #@staticmethod
-    #def alpha_F() -> mpf:
-    #    '''
-    #    foias constant, only number for which a certain recurrence diverges.
-    #    '''
-    #    # TODO how the hell is this calculated (maybe findroot???)
+    @staticmethod
+    def alpha_F() -> mpf:
+        '''
+        foias constant, only number for which a certain recurrence diverges.
+        WARNING: This is not a calculation!
+        ''' # TODO how the hell is this calculated (maybe findroot???)
+        return mp.mpf('1.18745235112650105459')
     
     @staticmethod
     def L_D() -> mpf:
@@ -683,12 +701,13 @@ class Constants:
         '''
         return mp.power(mp.gamma(0.25), 2) / (4 * mp.power(mp.pi, 1.5))
     
-    #@staticmethod
-    #def rho_Pi() -> mpf:
-    #    '''
-    #    taniguchi constant, a kind of euler product.
-    #    '''
-    #    # TODO need primes again...
+    @staticmethod
+    def T_Pi() -> mpf:
+        '''
+        taniguchi constant, a kind of euler product.
+        WARNING: This is not a calculation!
+        ''' # TODO need primes again...
+        return mp.mpf('0.67823449191739197803')
 
 '''
 List of rejected constants:
