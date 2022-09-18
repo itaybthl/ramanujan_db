@@ -5,6 +5,7 @@ from sqlalchemy.types import Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from enum import Enum
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -30,6 +31,14 @@ class NamedConstant(Base):
     base = relationship('Constant')
 
 
+class PcfConvergence(Enum):
+    ZERO_DENOM = 0
+    NO_FR = 1
+    INDETERMINATE_FR = 2
+    FR = 3
+    RATIONAL = 4
+
+
 class PcfCanonicalConstant(Base):
     __tablename__ = 'pcf_canonical_constant'
     __table_args__ = (
@@ -41,6 +50,7 @@ class PcfCanonicalConstant(Base):
     q = Column(ARRAY(Numeric()), nullable=False)
     last_matrix = Column(ARRAY(Numeric()))
     depth = Column(Integer)
+    convergence = Column(Integer)
     
     base = relationship('Constant')
 

@@ -17,14 +17,19 @@ configuration = {
             'iterations': 2
         },
         'calculate_precision': {
-            'args': { 'bulk': 1000, 'num_denom_factor': (2, True) },
+            'args': { 'bulk': 1000, 'const_type': 'PcfCanonical', 'balanced_only': True },
             'run_async': True,
             'async_cores': 4,
             'cooldown': 30,
             'no_work_timeout': 60
         },
         'poly_pslq': {
-            'args': { 'bulk': 1000, 'num_denom_factor': (2, True), 'num_of_consts': (2, True), 'num_of_cfs': (1, True), 'degree': (2, 1), 'use_artificial': False },
+            'args': { 'subdivide': {
+                'PcfCanonical': { 'count': (1, True), 'balanced_only': True },
+                'Named': { 'count': (2, True), 'use_artificial': False }
+                },
+                'degree': (2, 1), 'bulk': 1000
+            },
             'run_async': True,
             'async_cores': 4,
             'cooldown': 30,

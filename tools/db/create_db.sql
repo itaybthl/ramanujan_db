@@ -31,6 +31,7 @@ CREATE TABLE pcf_canonical_constant (
 	q INT[] NOT NULL,
 	last_matrix INT[],
 	depth INT,
+	convergence INT,
 	
 	UNIQUE(p, q)
 );

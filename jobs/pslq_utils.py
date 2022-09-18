@@ -17,11 +17,7 @@ def check_int_null_vector(first_value, second_value):
     # Verify: denote the math const as M and the CF value as cf then the result we seek is:
     # (a*M + b) / (c*M + d) = cf
     # where a,b,c,d are result[0], result[1], result[2], result[3] respectively
-    if result:
-        val = verify_result(first_value, second_value, result)
-        return val
-
-    return None
+    return verify_result(first_value, second_value, result) if result else None
 
 def verify_result2(constants, cf, res):
     if mp.almosteq(constants.dot(res[:len(constants)]), cf * constants.dot(res[len(constants):])):

@@ -33,20 +33,19 @@ Examples:
 '''
 from db import models, ramanujan_db
 import mpmath as mp
-import time
+from time import time
 from sqlalchemy import Integer, or_, Float
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.sql.expression import func
 from jobs import pslq_utils
-import logging
-import logging.config
-import sys
-import os
-from itertools import chain, combinations, combinations_with_replacement, takewhile
+from logging import getLogger
+from logging.config import fileConfig
+from os import getpid
+from itertools import chain, combinations, combinations_with_replacement, takewhile, product
 from collections import Counter
 from functools import reduce
 from operator import mul
-import traceback
+from traceback import format_exc
 
 mp.mp.dps = 2000
 
@@ -55,38 +54,23 @@ EXECUTE_NEEDS_ARGS = True
 ALGORITHM_NAME = 'POLYNOMIAL_PSLQ'
 LOGGER_NAME = 'job_logger'
 BULK_SIZE = 500
-DEFAULT_NUM_OF_CONSTANTS = (1, True)
-DEFAULT_NUM_OF_CFS = (1, True)
+BULK_TYPES = {'PcfCanonical'}
+SUPPORTED_TYPES = ['Named', 'PcfCanonical']
+DEFAULT_CONST_COUNT = (1, True)
 DEFAULT_DEGREE = (2, 1)
 DEFAULT_USE_ARTIFICIAL = False
 
 FILTERS = [
-        models.Cf.precision_data != None,
-        models.Cf.precision_data.has(models.CfPrecision.precision > 100),
-        models.Cf.precision_data.has(models.CfPrecision.general_data != None),
-        models.Cf.precision_data.has(models.CfPrecision.general_data['rational'].cast(Float) == 0.0),
-        or_(models.Cf.scanned_algo == None, ~models.Cf.scanned_algo.has_key(ALGORITHM_NAME))
+        models.Constant.precision > 100
+        #or_(models.Cf.scanned_algo == None, ~models.Cf.scanned_algo.has_key(ALGORITHM_NAME)) # TODO USE scan_history TABLE!!!
         ]
 
-def get_filters(num_denom_factor):
+def get_filters(subdivide, const_type):
     filters = FILTERS
-    if num_denom_factor is not None:
-        factor, strict = num_denom_factor
-        num_deg = func.cardinality(models.Cf.partial_numerator) - 1
-        denom_deg = func.cardinality(models.Cf.partial_denominator) - 1
-        if factor > 0:
-            low_deg = denom_deg * factor
-            high_deg = num_deg
-        else:
-            low_deg = num_deg * abs(factor)
-            high_deg = denom_deg
-
-        if strict:
-            new_filter = low_deg == high_deg
-        else:
-            new_filter = low_deg <= high_deg
-
-        filters = [new_filter] + filters
+    if const_type == 'PcfCanonical':
+        filters += [models.PcfCanonicalConstant.convergence != models.PcfConvergence.RATIONAL.value]
+        if subdivide['PcfCanonical'].get('balanced_only', False):
+            filters += [func.cardinality(models.PcfCanonicalConstant.p) == func.cardinality(models.PcfCanonicalConstant.q)]
 
     return filters 
 
@@ -97,24 +81,21 @@ def poly_check(values, exponents):
     result = pslq_utils.find_null_polynomial(poly)
     
     if result:
-        logging.getLogger(LOGGER_NAME).info('Found relation')
+        getLogger(LOGGER_NAME).info('Found relation')
 
     return result
 
-def compress_relation(result, cfs, consts, exponents, degree):
+def compress_relation(result, consts, exponents, degree):
     # will need to use later, so evaluating into lists
-    logging.getLogger(LOGGER_NAME).info(f'Original relation is {result}')
+    getLogger(LOGGER_NAME).info(f'Original relation is {result}')
     
-    indices_per_var = list(list(i[0] for i in enumerate(exponents) if i[1][j]) for j in range(len(cfs)+len(consts)))
+    indices_per_var = list(list(i[0] for i in enumerate(exponents) if i[1][j]) for j in range(len(consts)))
     redundant_vars = list(i[0] for i in enumerate(indices_per_var) if not any(result[j] for j in i[1]))
     redundant_coeffs = set()
     for redundant_var in redundant_vars: # remove redundant variables
-        logging.getLogger(LOGGER_NAME).info(f'Removing redundant variable #{redundant_var}')
+        getLogger(LOGGER_NAME).info(f'Removing redundant variable #{redundant_var}')
         redundant_coeffs |= set(indices_per_var[redundant_var])
-        if redundant_var >= len(consts):
-            cfs = cfs[:redundant_var - len(consts)] + cfs[redundant_var - len(consts) + 1:]
-        else:
-            consts = consts[:redundant_var] + consts[redundant_var + 1:]
+        consts = consts[:redundant_var] + consts[redundant_var + 1:]
     
     polydegree, innerdegree = degree # remove redundant degrees
     indices_per_polydegree = list(list(i[0] for i in enumerate(exponents) if sum(i[1].values())==j) for j in range(polydegree+1))
@@ -132,98 +113,125 @@ def compress_relation(result, cfs, consts, exponents, degree):
     redundant_coeffs.update(*indices_per_innerdegree[innerdegree+1:])
     
     degree = [polydegree, innerdegree]
-    logging.getLogger(LOGGER_NAME).info(f'True degree is {degree}')
+    getLogger(LOGGER_NAME).info(f'True degree is {degree}')
     for i in sorted(redundant_coeffs, reverse=True):
         del result[i]
     
-    logging.getLogger(LOGGER_NAME).info(f'Compressed relation is {result}')
+    getLogger(LOGGER_NAME).info(f'Compressed relation is {result}')
 
     # TODO now also manually test for smaller sub-relations! PSLQ is only guaranteed to return
     # a small norm, but not guaranteed to return a 1-dimensional relation! see for example pslq([1,3,5])
 
-    return models.Relation(relation_type=ALGORITHM_NAME, details=degree+result, cfs=list(cfs), constants=list(consts))
+    return models.Relation(relation_type=ALGORITHM_NAME, details=degree+result, constants=list(consts))
 
-def check_cfs(cfs, constants, num_of_consts, exponents, degree, use_artificial, existing):
-    logging.getLogger(LOGGER_NAME).info(f'checking cfs: {[(cf.partial_numerator, cf.partial_denominator) for cf in cfs]}')
+def check_consts(consts, exponents, degree):
+    getLogger(LOGGER_NAME).info(f'checking consts: {[c.const_id for c in consts]}')
     relations = []
-    if not use_artificial: # just this line caused me so much trouble... doesn't seem like SQL handles booleans too well
-        constants = constants.filter(models.Constant.artificial == 0)
-    num, strict = num_of_consts # if strict then only check subsets of exactly num size, else check subsets of size 1..num
-    subsets = combinations(constants, num) if strict else chain.from_iterable(combinations(constants, n) for n in range(1,num+1))
-    subsets = list(subsets) # weird python idiosyncrasies mean this must be evaluated before being iterated on again
-    subsets = (consts for consts in subsets if not any(r for r in existing if set(c.constant_id for c in r.constants) <= set(c.constant_id for c in consts)))
-    for consts in subsets:
-        logging.getLogger(LOGGER_NAME).debug(f'checking consts {[const.name for const in consts]}')
-        mp.mp.dps = min([const.precision for const in consts] + [cf.precision_data.precision for cf in cfs]) * 9 // 10
-        result = poly_check([const.value for const in consts]
-                            + [mp.mpf(str(cf.precision_data.previous_calc[2])) / mp.mpf(str(cf.precision_data.previous_calc[3])) for cf in cfs],
-                            exponents)
-        if result:
-            if relations: # TODO: Report because we found 2 different constants
-                logging.getLogger(LOGGER_NAME).critical(f'found connection to multiple constants!!!')
-            relations.append(compress_relation(result, cfs, consts, exponents, degree))
+    mp.mp.dps = min([c.base.precision for c in consts]) * 9 // 10
+    result = poly_check([c.base.value for c in consts], exponents)
+    if result:
+        if relations: # TODO: Report because we found 2 different constants
+            getLogger(LOGGER_NAME).critical('found connection to multiple constants!!!')
+        relations.append(compress_relation(result, consts, exponents, degree))
     
     return relations
 
-def run_query(bulk=0, num_denom_factor=None, num_of_consts=None, num_of_cfs=None, degree=None, use_artificial=False):
-    logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_manager'})
+def transpose(l):
+    return [[l[j][i] for j in range(len(l))] for i in range(len(l[0]))]
+
+def get_consts(const_type, db_handle, subdivide):
+    if const_type == 'Named':
+        res = db_handle.constants
+        if not subdivide['Named'].get('use_artificial', False):
+            res = res.filter(models.NamedConstant.artificial == 0)
+        return res
+
+def run_query(subdivide=None, degree=None, bulk=None):
+    fileConfig('logging.config', defaults={'log_filename': 'pslq_const_manager'})
+    if not subdivide:
+        return []
+    bulk_types = set(subdivide.keys()) & BULK_TYPES
+    if not bulk_types:
+        return []
     bulk = bulk if bulk else BULK_SIZE
-    logging.getLogger(LOGGER_NAME).debug(f'Starting to check relations, using PCF bulk size {bulk}')
+    getLogger(LOGGER_NAME).debug(f'Starting to check relations, using bulk size {bulk}')
     db_handle = ramanujan_db.RamanujanDB()
-    results = db_handle.session.query(models.Cf).filter(*get_filters(num_denom_factor)).order_by(func.random()).limit(bulk).all()
+    results = [db_handle.session.query(eval(f'models.{const_type}Constant')).filter(*get_filters(subdivide, const_type)).order_by(func.random()).limit(bulk).all() for const_type in bulk_types]
     # apparently postgresql is really slow with the order_by(random) part,
     # but on 1000 CFs it only takes 1 second, which imo is worth it since
     # that allows us more variety in testing the CFs
     db_handle.session.close()
-    logging.getLogger(LOGGER_NAME).info(f'size of batch is {len(results)}')
-    return results
+    getLogger(LOGGER_NAME).info(f'size of batch is {len(results)}')
+    return transpose(results) # so pool_handler can correctly divide among the sub-processes
 
-def execute_job(query_data, bulk=0, num_denom_factor=None, num_of_consts=None, num_of_cfs=None, degree=None, use_artificial=False):
+def execute_job(query_data, subdivide=None, degree=None):
+    fileConfig('logging.config', defaults={'log_filename': f'pslq_const_worker_{getpid()}'})
+    if not subdivide:
+        getLogger(LOGGER_NAME).error('Nothing to do! Aborting...')
+        return 0 # this shouldn't happen unless pool_handler changes, so just in case...
     try:
-        logging.config.fileConfig('logging.config', defaults={'log_filename': f'pslq_const_worker_{os.getpid()}'})
-        num_of_consts = num_of_consts if num_of_consts else DEFAULT_NUM_OF_CONSTANTS
-        num_of_cfs = num_of_cfs if num_of_cfs else DEFAULT_NUM_OF_CFS
+        to_ignore = []
+        for const_type in subdivide:
+            if const_type not in SUPPORTED_TYPES:
+                msg = f'Unsupported constant type {const_type} will be ignored! Must be one of {SUPPORTED_TYPES}.'
+                print(msg)
+                getLogger(LOGGER_NAME).warn(msg)
+                to_ignore += [const_type]
+            elif 'count' not in subdivide[const_type]:
+                subdivide[const_type]['count'] = DEFAULT_CONST_COUNT
+        for ignore in to_ignore:
+            del subdivide[ignore]
+        total_consts = sum(c['count'] for c in subdivide.values())
         degree = degree if degree else DEFAULT_DEGREE
-        use_artificial = use_artificial if use_artificial else DEFAULT_USE_ARTIFICIAL # kinda redundant, but whatever
-        logging.getLogger(LOGGER_NAME).info(f'checking against {num_of_consts} constants and {num_of_cfs} PCFs at a time, using degree-{degree} relations')
-        if degree[0] > (num_of_consts[0] + num_of_cfs[0]) * degree[1]:
-            degree = ((num_of_consts[0] + num_of_cfs[0]) * degree[1], degree[1])
-            logging.getLogger(LOGGER_NAME).info(f'redundant degree detected! reducing to {degree}')
+        getLogger(LOGGER_NAME).info(f'checking against {total_consts} constants at a time, subdivided into {({k : subdivide[k]["count"] for k in subdivide})}, using degree-{degree} relations')
+        if degree[0] > total_consts * degree[1]:
+            degree = (total_consts * degree[1], degree[1])
+            getLogger(LOGGER_NAME).info(f'redundant degree detected! reducing to {degree}')
         
         polydegree, innerdegree = degree
-        exponents = list(c for c in map(Counter, chain.from_iterable(combinations_with_replacement(range(num_of_consts[0] + num_of_cfs[0]), i) for i in range(polydegree+1)))
+        exponents = list(c for c in map(Counter, chain.from_iterable(combinations_with_replacement(range(total_consts), i) for i in range(polydegree+1)))
                          if not any(i for i in c.values() if i > innerdegree))
+        
+        query_data = transpose(query_data)
         db_handle = ramanujan_db.RamanujanDB()
+        subsets = []
+        for const_type in subdivide:
+            num, strict = subdivide[const_type]['count']
+            options = None
+            if const_type in bulk_types:
+                index = [i for i in range(len(query_data)) if isinstance(query_data[i], eval(f'models.{const_type}Constant'))][0]
+                options = query_data[index]
+            else
+                options = get_consts(const_type, db_handle, subdivide)
+            subsets += [combinations(options, num) if strict else chain.from_iterable(combinations(options, n) for n in range(1,num+1))]
+        
         relations = []
-        num, strict = num_of_cfs
-        cf_subsets = combinations(query_data, num) if strict else chain.from_iterable(combinations(query_data, n) for n in range(1,num+1))
-        for cfs in cf_subsets:
+        for consts in product(*subsets):
             # evaluate once to reuse over all subsets of constants
             existing = list(r for r in db_handle.session.query(models.Relation).all() + relations
-                            if set(c.cf_id for c in r.cfs) <= set(c.cf_id for c in cfs) and r.details[0] <= polydegree and r.details[1] <= innerdegree)
-            new_relations = check_cfs(cfs, db_handle.constants, num_of_consts, exponents, degree, use_artificial, existing)
-            if new_relations:
-                relations += new_relations
-            for cf in cfs:
-                if not cf.scanned_algo:
-                    cf.scanned_algo = dict()
-                cf.scanned_algo[ALGORITHM_NAME] = int(time.time())
-                # for postgres < 9.4
-                flag_modified(cf, 'scanned_algo')
-            db_handle.session.add_all(cfs)
-        logging.getLogger(LOGGER_NAME).info(f'finished - found {len(relations)} results')
+                            if set(c.const_id for c in r.constants) <= set(c.const_id for c in consts) and r.details[0] <= polydegree and r.details[1] <= innerdegree)
+            if not existing:
+                new_relations = check_consts(consts, exponents, degree)
+                if new_relations:
+                    relations += new_relations
+            #for cf in consts:
+            #    if not cf.scanned_algo:
+            #        cf.scanned_algo = dict()
+            #    cf.scanned_algo[ALGORITHM_NAME] = int(time())
+            #db_handle.session.add_all(consts)
+        getLogger(LOGGER_NAME).info(f'finished - found {len(relations)} results')
         db_handle.session.add_all(relations)
         db_handle.session.commit()
         db_handle.session.close()
         
-        logging.getLogger(LOGGER_NAME).info(f'Commit done')
+        getLogger(LOGGER_NAME).info('Commit done')
         
         return len(relations)
-    except Exception as e:
-        logging.getLogger(LOGGER_NAME).error(f'Exception in execute job: {traceback.format_exc()}')
+    except:
+        getLogger(LOGGER_NAME).error(f'Exception in execute job: {format_exc()}')
 
 def summarize_results(results):
-    logging.getLogger(LOGGER_NAME).info(f'In total found {sum(results)} relations')
+    getLogger(LOGGER_NAME).info(f'In total found {sum(results)} relations')
 
 def run_one(cf_id, db_handle,write_to_db=False, num_of_consts=None):
     #db_handle = ramanujan_db.RamanujanDB()
@@ -232,7 +240,7 @@ def run_one(cf_id, db_handle,write_to_db=False, num_of_consts=None):
     if write_to_db:
         if not cf.scanned_algo:
             cf.scanned_algo = dict()
-        cf.scanned_algo[ALGORITHM_NAME] = int(time.time())
+        cf.scanned_algo[ALGORITHM_NAME] = int(time())
         # for postgres < 9.4
         flag_modified(cf, 'scanned_algo')
 
