@@ -1,8 +1,8 @@
 name: update_db_from_boinc_test
 run-name: update_db_from_boinc1
-on: workflow_dispatch
-  #schedule:
-  #  - cron: "0 6 */1 * *"
+on:
+  schedule:
+    - cron: "*/5 * * * *"
   
 jobs:
   update_db:
