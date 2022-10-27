@@ -1,8 +1,6 @@
 name: update_db_from_boinc_test
 run-name: update_db_from_boinc1
-on:
-  schedule:
-    - cron: "*/5 * * * *"
+on: [push]
   
 jobs:
   update_db:
