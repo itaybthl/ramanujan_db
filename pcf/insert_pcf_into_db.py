@@ -3,7 +3,6 @@ import mpmath
 from db import models
 from db import ramanujan_db
 
-from tools import write_constants
 from db.models import PcfCanonicalConstant, Constant
 
 import sympy

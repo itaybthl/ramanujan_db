@@ -5,6 +5,9 @@ from bs4 import BeautifulSoup
 import json
 import time
 import sympy
+
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from PCF import PCF
 from insert_pcf_into_db import add_multiple_pcfs
 
