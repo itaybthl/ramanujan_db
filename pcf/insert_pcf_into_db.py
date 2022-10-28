@@ -48,7 +48,7 @@ def add_pcf(pcf, override_fr_check=False):
             # an_degree = pcf.an.degree()
             # if not check_for_fr(an_iterator, bn_iterator, an_degree)[0]:
             #     raise NoFRException()
-    top, bot = pcf.get_cannonical_form()
+    top, bot = pcf.get_canonical_form()
     # By default the coefs are of type sympy.core.numbers.Integer but sql need them to be integers
     integer_top_coeffs = [int(coef) for coef in top.all_coeffs()]
     integer_bot_coeffs = [int(coef) for coef in bot.all_coeffs()]
